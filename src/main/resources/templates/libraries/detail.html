@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/default :: html(content=~{::main-content}, pageTitle=${pageTitle}, currentPage=${currentPage})}">
+<head>
+    <meta charset="UTF-8">
+</head>
+<body>
+    <div th:fragment="main-content">
+        <!-- Breadcrumb -->
+        <nav class="mb-4">
+            <ol class="flex items-center space-x-2 text-sm">
+                <li><a th:href="@{/libraries}" class="text-gray-500 hover:text-gray-700">Libraries</a></li>
+                <li class="text-gray-400">/</li>
+                <li class="text-gray-900" th:text="${library.displayName()}">Library Name</li>
+            </ol>
+        </nav>
+
+        <!-- Header -->
+        <div class="card mb-6">
+            <div class="flex items-start justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900" th:text="${library.displayName()}">Library Name</h1>
+                    <p class="text-sm text-gray-500 font-mono mt-1" th:text="${library.name()}">library-name</p>
+                </div>
+                <div class="space-x-2">
+                    <a th:href="@{/libraries/{id}/edit(id=${library.id()})}" class="btn btn-secondary">Edit</a>
+                    <button type="button"
+                            class="btn btn-danger"
+                            th:data-delete-library="${library.id()}"
+                            th:data-library-name="${library.displayName()}">Delete</button>
+                </div>
+            </div>
+
+            <div th:if="${library.description()}" class="mt-4">
+                <p class="text-gray-600" th:text="${library.description()}">Description</p>
+            </div>
+
+            <div class="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
+                <div>
+                    <dt class="text-sm text-gray-500">Source Type</dt>
+                    <dd class="font-medium" th:text="${library.sourceType()}">GITHUB</dd>
+                </div>
+                <div th:if="${library.category()}">
+                    <dt class="text-sm text-gray-500">Category</dt>
+                    <dd class="font-medium" th:text="${library.category()}">backend</dd>
+                </div>
+                <div th:if="${library.sourceUrl()}">
+                    <dt class="text-sm text-gray-500">Source URL</dt>
+                    <dd>
+                        <a th:href="${library.sourceUrl()}"
+                           th:text="${library.sourceUrl()}"
+                           class="text-indigo-600 hover:text-indigo-800 text-sm truncate block"
+                           target="_blank">URL</a>
+                    </dd>
+                </div>
+            </div>
+
+            <div th:if="${library.tags() != null && !library.tags().isEmpty()}" class="mt-4">
+                <dt class="text-sm text-gray-500 mb-2">Tags</dt>
+                <div class="flex flex-wrap gap-2">
+                    <span th:each="tag : ${library.tags()}"
+                          class="px-2 py-1 text-sm bg-gray-100 text-gray-700 rounded"
+                          th:text="${tag}">tag</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Versions -->
+        <div class="card">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-semibold text-gray-900">Versions</h2>
+                <button type="button"
+                        class="btn btn-primary"
+                        th:data-sync-library="${library.id()}">
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                    </svg>
+                    Sync Version
+                </button>
+            </div>
+
+            <div th:if="${#lists.isEmpty(versions)}" class="empty-state">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z"/>
+                </svg>
+                <p>No versions yet</p>
+                <p class="text-sm mt-2">Click "Sync Version" to add a new version</p>
+            </div>
+
+            <table th:if="${!#lists.isEmpty(versions)}" class="table">
+                <thead>
+                    <tr>
+                        <th>Version</th>
+                        <th>Status</th>
+                        <th>Docs Path</th>
+                        <th>Last Sync</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="version, iterStat : ${versions}">
+                        <td>
+                            <span th:text="${version.version()}" class="font-mono">1.0.0</span>
+                            <span th:if="${version.isLatest()}" class="ml-2 badge badge-success">Latest</span>
+                        </td>
+                        <td>
+                            <span th:switch="${version.status().name()}">
+                                <span th:case="'ACTIVE'" class="badge badge-success">Active</span>
+                                <span th:case="'DEPRECATED'" class="badge badge-warning">Deprecated</span>
+                                <span th:case="'EOL'" class="badge badge-danger">EOL</span>
+                            </span>
+                        </td>
+                        <td class="text-sm text-gray-500" th:text="${version.docsPath()} ?: '-'">docs/</td>
+                        <td>
+                            <span th:if="${syncStatuses[__${iterStat.index}__] != null}">
+                                <span th:switch="${syncStatuses[__${iterStat.index}__].status().name()}">
+                                    <span th:case="'SUCCESS'" class="text-green-600">Success</span>
+                                    <span th:case="'RUNNING'" class="text-blue-600">Running</span>
+                                    <span th:case="'FAILED'" class="text-red-600">Failed</span>
+                                    <span th:case="'PENDING'" class="text-yellow-600">Pending</span>
+                                </span>
+                                <span class="text-xs text-gray-400 ml-2"
+                                      th:text="${#temporals.format(syncStatuses[__${iterStat.index}__].startedAt(), 'MM-dd HH:mm')}">-</span>
+                            </span>
+                            <span th:if="${syncStatuses[__${iterStat.index}__] == null}" class="text-gray-400">Never</span>
+                        </td>
+                        <td>
+                            <button type="button"
+                                    class="text-sm text-indigo-600 hover:text-indigo-800"
+                                    th:data-sync-library="${library.id()}"
+                                    th:data-version="${version.version()}">
+                                Sync
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+</html>

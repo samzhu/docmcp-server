@@ -157,6 +157,20 @@ public class SyncService {
     }
 
     /**
+     * 取得同步歷史列表
+     *
+     * @param versionId 版本 ID（可選，null 表示查詢所有）
+     * @param limit     結果數量上限
+     * @return 同步歷史列表
+     */
+    public List<SyncHistory> getSyncHistory(UUID versionId, int limit) {
+        if (versionId != null) {
+            return syncHistoryRepository.findByVersionIdOrderByStartedAtDescLimit(versionId, limit);
+        }
+        return syncHistoryRepository.findAllOrderByStartedAtDesc(limit);
+    }
+
+    /**
      * 處理單一文件
      */
     @Transactional

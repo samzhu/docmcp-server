@@ -74,4 +74,31 @@ public interface SyncHistoryRepository extends CrudRepository<SyncHistory, UUID>
             )
             """)
     boolean hasRunningSyncTask(@Param("versionId") UUID versionId);
+
+    /**
+     * 取得所有同步歷史（依開始時間降序，限制數量）
+     *
+     * @param limit 結果數量上限
+     * @return 同步歷史列表
+     */
+    @Query("SELECT * FROM sync_history ORDER BY started_at DESC LIMIT :limit")
+    List<SyncHistory> findAllOrderByStartedAtDesc(@Param("limit") int limit);
+
+    /**
+     * 取得指定版本的同步歷史（限制數量）
+     *
+     * @param versionId 版本 ID
+     * @param limit     結果數量上限
+     * @return 同步歷史列表
+     */
+    @Query("""
+            SELECT * FROM sync_history
+            WHERE version_id = :versionId
+            ORDER BY started_at DESC
+            LIMIT :limit
+            """)
+    List<SyncHistory> findByVersionIdOrderByStartedAtDescLimit(
+            @Param("versionId") UUID versionId,
+            @Param("limit") int limit
+    );
 }

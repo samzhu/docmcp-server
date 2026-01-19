@@ -1,5 +1,6 @@
 package io.github.samzhu.docmcp.service;
 
+import io.github.samzhu.docmcp.domain.enums.SourceType;
 import io.github.samzhu.docmcp.domain.exception.LibraryNotFoundException;
 import io.github.samzhu.docmcp.domain.model.Library;
 import io.github.samzhu.docmcp.domain.model.LibraryVersion;
@@ -9,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.UUID;
 
 /**
  * 函式庫服務
@@ -92,6 +94,104 @@ public class LibraryService {
                 .orElseThrow(() -> LibraryNotFoundException.byName(libraryName));
 
         return libraryVersionRepository.findByLibraryId(library.id());
+    }
+
+    /**
+     * 根據 ID 取得函式庫
+     *
+     * @param id 函式庫 ID
+     * @return 函式庫
+     * @throws LibraryNotFoundException 若函式庫不存在
+     */
+    public Library getLibraryById(UUID id) {
+        return libraryRepository.findById(id)
+                .orElseThrow(() -> LibraryNotFoundException.byId(id));
+    }
+
+    /**
+     * 建立新函式庫
+     *
+     * @param name        函式庫名稱
+     * @param displayName 顯示名稱
+     * @param description 描述
+     * @param sourceType  來源類型
+     * @param sourceUrl   來源網址
+     * @param category    分類
+     * @param tags        標籤列表
+     * @return 建立的函式庫
+     */
+    @Transactional
+    public Library createLibrary(String name, String displayName, String description,
+                                  SourceType sourceType, String sourceUrl,
+                                  String category, List<String> tags) {
+        // 檢查名稱是否已存在
+        if (libraryRepository.findByName(name).isPresent()) {
+            throw new IllegalArgumentException("函式庫名稱已存在: " + name);
+        }
+
+        Library library = Library.create(name, displayName, description,
+                sourceType, sourceUrl, category, tags);
+        return libraryRepository.save(library);
+    }
+
+    /**
+     * 更新函式庫
+     *
+     * @param id          函式庫 ID
+     * @param displayName 顯示名稱（null 表示不更新）
+     * @param description 描述（null 表示不更新）
+     * @param sourceType  來源類型（null 表示不更新）
+     * @param sourceUrl   來源網址（null 表示不更新）
+     * @param category    分類（null 表示不更新）
+     * @param tags        標籤列表（null 表示不更新）
+     * @return 更新後的函式庫
+     * @throws LibraryNotFoundException 若函式庫不存在
+     */
+    @Transactional
+    public Library updateLibrary(UUID id, String displayName, String description,
+                                  SourceType sourceType, String sourceUrl,
+                                  String category, List<String> tags) {
+        Library existing = getLibraryById(id);
+
+        Library updated = new Library(
+                existing.id(),
+                existing.name(),
+                displayName != null ? displayName : existing.displayName(),
+                description != null ? description : existing.description(),
+                sourceType != null ? sourceType : existing.sourceType(),
+                sourceUrl != null ? sourceUrl : existing.sourceUrl(),
+                category != null ? category : existing.category(),
+                tags != null ? tags : existing.tags(),
+                existing.createdAt(),
+                null  // updatedAt 由資料庫自動處理
+        );
+
+        return libraryRepository.save(updated);
+    }
+
+    /**
+     * 刪除函式庫
+     *
+     * @param id 函式庫 ID
+     * @throws LibraryNotFoundException 若函式庫不存在
+     */
+    @Transactional
+    public void deleteLibrary(UUID id) {
+        Library library = getLibraryById(id);
+        libraryRepository.delete(library);
+    }
+
+    /**
+     * 根據函式庫 ID 取得所有版本
+     *
+     * @param libraryId 函式庫 ID
+     * @return 版本列表
+     * @throws LibraryNotFoundException 若函式庫不存在
+     */
+    public List<LibraryVersion> getLibraryVersionsById(UUID libraryId) {
+        // 確認函式庫存在
+        getLibraryById(libraryId);
+        return libraryVersionRepository.findByLibraryId(libraryId);
     }
 
     /**

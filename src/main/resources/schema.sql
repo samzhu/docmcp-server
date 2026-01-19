@@ -106,6 +106,25 @@ CREATE TABLE IF NOT EXISTS sync_history (
 COMMENT ON TABLE sync_history IS '追蹤文件同步歷史記錄';
 COMMENT ON COLUMN sync_history.status IS '同步狀態: PENDING, RUNNING, SUCCESS, FAILED';
 
+-- 建立 api_keys 表（API 金鑰表）
+CREATE TABLE IF NOT EXISTS api_keys (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(100) NOT NULL UNIQUE,
+    key_hash VARCHAR(255) NOT NULL,
+    key_prefix VARCHAR(20) NOT NULL UNIQUE,
+    status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
+    rate_limit INTEGER DEFAULT 1000,
+    expires_at TIMESTAMP WITH TIME ZONE,
+    last_used_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_by VARCHAR(100)
+);
+
+COMMENT ON TABLE api_keys IS '儲存 API 認證金鑰';
+COMMENT ON COLUMN api_keys.key_hash IS 'BCrypt 雜湊後的金鑰';
+COMMENT ON COLUMN api_keys.key_prefix IS '金鑰前綴，用於識別（如 dmcp_xxxx）';
+COMMENT ON COLUMN api_keys.status IS '金鑰狀態: ACTIVE, REVOKED, EXPIRED';
+
 -- 建立索引以優化查詢效能
 
 -- Libraries 索引
@@ -133,6 +152,10 @@ CREATE INDEX IF NOT EXISTS idx_code_examples_language ON code_examples(language)
 -- Sync history 索引
 CREATE INDEX IF NOT EXISTS idx_sync_history_version_id ON sync_history(version_id);
 CREATE INDEX IF NOT EXISTS idx_sync_history_status ON sync_history(status);
+
+-- API keys 索引
+CREATE INDEX IF NOT EXISTS idx_api_keys_key_prefix ON api_keys(key_prefix);
+CREATE INDEX IF NOT EXISTS idx_api_keys_status ON api_keys(status);
 
 -- 注意：tsvector 觸發器需要在資料庫層面另外設定
 -- 因為 Spring SQL 初始化不支援 PostgreSQL 的 $$ 引用語法

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/default :: html(content=~{::main-content}, pageTitle=${pageTitle}, currentPage=${currentPage})}">
+<head>
+    <meta charset="UTF-8">
+</head>
+<body>
+    <div th:fragment="main-content">
+        <!-- Breadcrumb -->
+        <nav class="mb-4">
+            <ol class="flex items-center space-x-2 text-sm">
+                <li><a th:href="@{/libraries}" class="text-gray-500 hover:text-gray-700">Libraries</a></li>
+                <li class="text-gray-400">/</li>
+                <li class="text-gray-900" th:text="${mode == 'edit'} ? 'Edit' : 'New'">New</li>
+            </ol>
+        </nav>
+
+        <!-- Form Card -->
+        <div class="card max-w-2xl">
+            <h2 class="text-xl font-semibold text-gray-900 mb-6"
+                th:text="${mode == 'edit'} ? 'Edit Library' : 'Add New Library'">Add New Library</h2>
+
+            <form id="library-form"
+                  th:data-mode="${mode}"
+                  th:data-library-id="${library?.id()}">
+
+                <div class="space-y-6">
+                    <!-- Name -->
+                    <div>
+                        <label for="name" class="form-label">Name *</label>
+                        <input type="text"
+                               id="name"
+                               name="name"
+                               class="form-input"
+                               placeholder="e.g., spring-boot"
+                               pattern="^[a-z0-9-]+$"
+                               required
+                               th:value="${library?.name()}"
+                               th:readonly="${mode == 'edit'}">
+                        <p class="text-xs text-gray-500 mt-1">Only lowercase letters, numbers, and hyphens</p>
+                    </div>
+
+                    <!-- Display Name -->
+                    <div>
+                        <label for="displayName" class="form-label">Display Name *</label>
+                        <input type="text"
+                               id="displayName"
+                               name="displayName"
+                               class="form-input"
+                               placeholder="e.g., Spring Boot"
+                               required
+                               th:value="${library?.displayName()}">
+                    </div>
+
+                    <!-- Description -->
+                    <div>
+                        <label for="description" class="form-label">Description</label>
+                        <textarea id="description"
+                                  name="description"
+                                  class="form-input"
+                                  rows="3"
+                                  placeholder="Brief description of the library"
+                                  th:text="${library?.description()}"></textarea>
+                    </div>
+
+                    <!-- Source Type -->
+                    <div>
+                        <label for="sourceType" class="form-label">Source Type *</label>
+                        <select id="sourceType" name="sourceType" class="form-input" required>
+                            <option th:each="type : ${sourceTypes}"
+                                    th:value="${type}"
+                                    th:text="${type}"
+                                    th:selected="${library?.sourceType() == type}">TYPE</option>
+                        </select>
+                    </div>
+
+                    <!-- Source URL -->
+                    <div>
+                        <label for="sourceUrl" class="form-label">Source URL</label>
+                        <input type="url"
+                               id="sourceUrl"
+                               name="sourceUrl"
+                               class="form-input"
+                               placeholder="https://github.com/owner/repo"
+                               th:value="${library?.sourceUrl()}">
+                        <p class="text-xs text-gray-500 mt-1">GitHub repository URL for automatic sync</p>
+                    </div>
+
+                    <!-- Category -->
+                    <div>
+                        <label for="category" class="form-label">Category</label>
+                        <input type="text"
+                               id="category"
+                               name="category"
+                               class="form-input"
+                               placeholder="e.g., backend, frontend, database"
+                               th:value="${library?.category()}">
+                    </div>
+
+                    <!-- Tags -->
+                    <div>
+                        <label for="tags" class="form-label">Tags</label>
+                        <input type="text"
+                               id="tags"
+                               name="tags"
+                               class="form-input"
+                               placeholder="java, framework, spring (comma-separated)"
+                               th:value="${library?.tags() != null ? #strings.listJoin(library.tags(), ', ') : ''}">
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="mt-8 flex items-center justify-end space-x-4">
+                    <a th:href="@{/libraries}" class="btn btn-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-primary">
+                        <span th:text="${mode == 'edit'} ? 'Update Library' : 'Create Library'">Create Library</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

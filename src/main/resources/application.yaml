@@ -69,6 +69,18 @@ management:
       probes:
         enabled: true
 
+# ----- DocMCP 安全配置 -----
+docmcp:
+  security:
+    api-key:
+      enabled: false  # 預設關閉 API Key 認證（生產環境應設為 true）
+      header-name: Authorization
+      prefix: "Bearer "
+      allow-anonymous: true  # 是否允許匿名存取非 MCP 端點
+      rate-limit:
+        enabled: true
+        requests-per-hour: 1000  # 預設每小時請求上限
+
 # ----- 日誌配置 -----
 logging:
   level:
