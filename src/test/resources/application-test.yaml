@@ -1,0 +1,29 @@
+# 測試環境配置
+spring:
+  # 允許 Bean 覆蓋（測試環境需要）
+  main:
+    allow-bean-definition-overriding: true
+
+  # 排除 Google GenAI 自動配置（使用 MockEmbeddingModel 替代）
+  autoconfigure:
+    exclude:
+      - org.springframework.ai.model.google.genai.autoconfigure.embedding.GoogleGenAiEmbeddingConnectionAutoConfiguration
+      - org.springframework.ai.model.google.genai.autoconfigure.embedding.GoogleGenAiTextEmbeddingAutoConfiguration
+      - org.springframework.ai.autoconfigure.vectorstore.pgvector.PgVectorStoreAutoConfiguration
+
+  # SQL 初始化配置（測試環境使用 schema.sql）
+  sql:
+    init:
+      mode: always
+      platform: postgresql
+
+  # 停用 Docker Compose（測試環境使用 Testcontainers）
+  docker:
+    compose:
+      enabled: false
+
+# 日誌配置
+logging:
+  level:
+    org.springframework.jdbc: DEBUG
+    io.github.samzhu.docmcp: DEBUG

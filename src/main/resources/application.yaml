@@ -1,3 +1,75 @@
+# =============================================================================
+# DocMCP Server - 基礎共用配置
+# =============================================================================
+# 此檔案包進 Docker Image，包含所有環境共用的配置
+# 環境特定配置透過 profile 檔案覆蓋
+# =============================================================================
+
 spring:
   application:
     name: DocMCP Server
+
+  profiles:
+    # 預設 profiles（可被 spring.profiles.active 覆蓋）
+    # 本地開發: 自動使用 local,dev
+    default: local,dev
+
+  threads:
+    virtual:
+      enabled: true  # Java 21+ Virtual Threads
+
+  # ----- 資料庫配置 -----
+  # 使用統一屬性名稱，各環境可覆蓋
+  datasource:
+    url: ${docmcp-db-url:jdbc:postgresql://localhost:5432/mydatabase}
+    username: ${docmcp-db-username:myuser}
+    password: ${docmcp-db-password:secret}
+
+  # ----- SQL 初始化配置 -----
+  sql:
+    init:
+      mode: always
+      platform: postgresql
+
+  # ----- Spring AI MCP Server 配置 -----
+  ai:
+    mcp:
+      server:
+        # 使用 Stateless HTTP 傳輸（適合雲端部署、無狀態水平擴展）
+        protocol: STATELESS
+        name: DocMCP Server
+        version: 0.1.0
+
+    # Google GenAI Embedding 配置
+    google:
+      genai:
+        embedding:
+          # 從統一屬性名稱讀取（本地: secrets.properties, GCP: Secret Manager）
+          api-key: ${docmcp-google-api-key:}
+          text:
+            options:
+              model: gemini-embedding-001
+
+    # PgVector 向量儲存配置
+    vectorstore:
+      pgvector:
+        dimensions: 768
+        distance-type: COSINE_DISTANCE
+        index-type: HNSW
+
+# ----- Actuator 配置 -----
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+
+# ----- 日誌配置 -----
+logging:
+  level:
+    root: INFO

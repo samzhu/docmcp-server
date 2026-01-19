@@ -39,3 +39,9 @@ out/
 
 .DS_Store
 dev.md
+
+### Secrets ###
+# 本地機敏設定檔（不提交 Git）
+config/application-secrets.properties
+# 保留範例檔
+!config/application-secrets.properties.example

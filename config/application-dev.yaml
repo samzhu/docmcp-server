@@ -1,0 +1,27 @@
+# =============================================================================
+# 開發環境行為配置
+# =============================================================================
+# Profile: dev
+# 用途: 本地開發環境，DEBUG 日誌、開啟更多 Actuator 端點
+# 啟動: spring.profiles.active=local,dev (預設)
+# =============================================================================
+
+spring:
+  config:
+    # 引入本地機敏設定檔（optional: 檔案不存在也不報錯）
+    import: "optional:file:./config/application-secrets.properties"
+
+# ----- Actuator 配置 -----
+# 開發環境開啟更多端點便於除錯
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,env,configprops
+
+# ----- 日誌配置 -----
+# 開發環境使用 DEBUG 級別
+logging:
+  level:
+    io.github.samzhu.docmcp: DEBUG
+    org.springframework.ai: DEBUG

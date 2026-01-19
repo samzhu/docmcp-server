@@ -1,6 +1,6 @@
 # DocMCP Server - Product Requirements Document (PRD)
 
-> **版本**：1.4.0
+> **版本**：1.5.0
 > **最後更新**：2026-01-19
 > **狀態**：Draft
 > **作者**：samzhu
@@ -52,7 +52,7 @@ DocMCP Server 是一個**自託管**的 Model Context Protocol (MCP) 伺服器�
 | **語言** | Java | 25 |
 | **框架** | Spring Boot | 4.0.1 |
 | **AI 框架** | Spring AI | 2.0.0-M1 |
-| **MCP 傳輸** | WebMVC (Streamable-HTTP) | - |
+| **MCP 傳輸** | WebMVC (Stateless) | - |
 | **向量儲存** | PostgreSQL + pgvector | - |
 | **模板引擎** | Thymeleaf | - |
 | **建構工具** | Gradle | - |
@@ -186,7 +186,7 @@ dependencies {
 |------|------|----------|
 | **展示層** | 處理外部請求，提供 MCP 端點和 Web 管理介面 | MCP Endpoint、Thymeleaf 頁面 |
 | **服務層** | 實作業務邏輯，協調各種操作 | Library/Search/Document/Embedding Service |
-| **資料存取層** | 封裝資料庫操作，提供統一的資料存取介面 | Spring Data JPA Repository |
+| **資料存取層** | 封裝資料庫操作，提供統一的資料存取介面 | Spring Data JDBC Repository |
 | **儲存層** | 實際的資料儲存，包含關聯式資料和向量資料 | PostgreSQL + pgvector |
 
 ### 2.4 Virtual Threads 架構
@@ -830,8 +830,7 @@ CREATE TRIGGER trigger_update_search_vector
 
 | 端點 | 方法 | 說明 |
 |------|------|------|
-| `/mcp` | POST | MCP JSON-RPC 請求 |
-| `/mcp` | GET | MCP SSE 串流 (Streamable-HTTP) |
+| `/mcp` | POST | MCP JSON-RPC 請求 (Stateless) |
 
 ### 5.2 Web API (供 UI 使用)
 
@@ -875,7 +874,7 @@ spring:
       server:
         name: DocMCP Server          # MCP Server 名稱（顯示給 AI 助手）
         version: 1.0.0               # 版本號
-        protocol: STREAMABLE         # 傳輸協議：STREAMABLE（Streamable-HTTP）
+        protocol: STATELESS          # 傳輸協議：STATELESS（無狀態，適合雲端部署）
         type: SYNC                   # 執行模式：SYNC（同步）或 ASYNC（非同步）
 
     # 注意：EmbeddingModel 和 VectorStore 使用非 starter 版本
@@ -1299,7 +1298,7 @@ docmcp:
 #### 8.3.2 其他安全措施
 
 - HTTPS 支援
-- SQL Injection 防護 (使用 JPA/Hibernate 參數化查詢)
+- SQL Injection 防護 (使用 Spring Data JDBC 參數化查詢)
 - 輸入驗證 (Jakarta Validation)
 - Rate Limiting (基於 API Key)
 - 敏感資料不記錄於日誌
@@ -1375,3 +1374,4 @@ docmcp:
 | 1.2.0 | 2026-01-19 | 改用 Gemini text-embedding-004，非 starter 手動配置 | samzhu |
 | 1.3.0 | 2026-01-19 | 新增繁體中文詳細註解說明 | samzhu |
 | 1.4.0 | 2026-01-19 | 更新為 gemini-embedding-001（text-embedding-004 已於 2026/1/14 停用），使用 768 維度以符合 2GB RAM 限制，修正 JEP 444 描述 | samzhu |
+| 1.5.0 | 2026-01-19 | MCP 協議改為 STATELESS（適合雲端部署、無狀態水平擴展），修正 spring.ai.mcp.server.protocol 設定 | samzhu |
