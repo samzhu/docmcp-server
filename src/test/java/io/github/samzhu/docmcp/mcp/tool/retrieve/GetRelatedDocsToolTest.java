@@ -5,7 +5,6 @@ import io.github.samzhu.docmcp.domain.model.Document;
 import io.github.samzhu.docmcp.domain.model.DocumentChunk;
 import io.github.samzhu.docmcp.repository.DocumentChunkRepository;
 import io.github.samzhu.docmcp.repository.DocumentRepository;
-import io.github.samzhu.docmcp.service.EmbeddingService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -36,14 +35,11 @@ class GetRelatedDocsToolTest {
     @Mock
     private DocumentChunkRepository chunkRepository;
 
-    @Mock
-    private EmbeddingService embeddingService;
-
     private GetRelatedDocsTool getRelatedDocsTool;
 
     @BeforeEach
     void setUp() {
-        getRelatedDocsTool = new GetRelatedDocsTool(documentRepository, chunkRepository, embeddingService);
+        getRelatedDocsTool = new GetRelatedDocsTool(documentRepository, chunkRepository);
     }
 
     @Test
@@ -66,7 +62,6 @@ class GetRelatedDocsToolTest {
 
         when(documentRepository.findById(sourceDocId)).thenReturn(Optional.of(sourceDoc));
         when(chunkRepository.findFirstByDocumentId(sourceDocId)).thenReturn(sourceChunk);
-        when(embeddingService.toVectorString(any())).thenReturn("[0.1,0.2]");
         when(chunkRepository.findSimilarChunksExcludingDocument(any(), anyString(), anyInt()))
                 .thenReturn(List.of(relatedChunk1, relatedChunk2));
         when(documentRepository.findById(relatedDocId1)).thenReturn(Optional.of(relatedDoc1));
@@ -98,7 +93,6 @@ class GetRelatedDocsToolTest {
 
         when(documentRepository.findById(sourceDocId)).thenReturn(Optional.of(sourceDoc));
         when(chunkRepository.findFirstByDocumentId(sourceDocId)).thenReturn(sourceChunk);
-        when(embeddingService.toVectorString(any())).thenReturn("[0.1,0.2]");
         when(chunkRepository.findSimilarChunksExcludingDocument(any(), anyString(), anyInt()))
                 .thenReturn(List.of(relatedChunk));
         when(documentRepository.findById(relatedDocId)).thenReturn(Optional.of(relatedDoc));
@@ -140,7 +134,6 @@ class GetRelatedDocsToolTest {
 
         when(documentRepository.findById(sourceDocId)).thenReturn(Optional.of(sourceDoc));
         when(chunkRepository.findFirstByDocumentId(sourceDocId)).thenReturn(sourceChunk);
-        when(embeddingService.toVectorString(any())).thenReturn("[0.1,0.2]");
         when(chunkRepository.findSimilarChunksExcludingDocument(any(), anyString(), anyInt()))
                 .thenReturn(List.of());
 
@@ -164,10 +157,16 @@ class GetRelatedDocsToolTest {
                 .hasMessageContaining("文件不存在");
     }
 
+    /**
+     * 建立測試用的 Document
+     */
     private Document createDocument(UUID id, UUID versionId, String title, String path) {
         return new Document(id, versionId, title, path, "content", null, "markdown", null, null, null);
     }
 
+    /**
+     * 建立測試用的 DocumentChunk
+     */
     private DocumentChunk createChunk(UUID documentId, String content, float[] embedding) {
         return new DocumentChunk(UUID.randomUUID(), documentId, 0, content, embedding, 100, null, null);
     }

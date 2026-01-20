@@ -150,6 +150,10 @@ CREATE INDEX IF NOT EXISTS idx_documents_search_vector ON documents USING GIN(se
 -- Document chunks 索引
 CREATE INDEX IF NOT EXISTS idx_document_chunks_document_id ON document_chunks(document_id);
 
+-- Document chunks metadata 索引（支援 VectorStore filter 機制）
+CREATE INDEX IF NOT EXISTS idx_document_chunks_metadata ON document_chunks USING GIN(metadata);
+CREATE INDEX IF NOT EXISTS idx_document_chunks_version_id ON document_chunks ((metadata->>'versionId'));
+
 -- Code examples 索引
 CREATE INDEX IF NOT EXISTS idx_code_examples_document_id ON code_examples(document_id);
 CREATE INDEX IF NOT EXISTS idx_code_examples_language ON code_examples(language);

@@ -1,21 +1,22 @@
 package io.github.samzhu.docmcp.service;
 
 import io.github.samzhu.docmcp.domain.model.Document;
-import io.github.samzhu.docmcp.domain.model.DocumentChunk;
 import io.github.samzhu.docmcp.mcp.dto.SearchResultItem;
-import io.github.samzhu.docmcp.repository.DocumentChunkRepository;
 import io.github.samzhu.docmcp.repository.DocumentRepository;
 import io.github.samzhu.docmcp.repository.LibraryVersionRepository;
+import org.springframework.ai.vectorstore.SearchRequest;
+import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
+
+import static io.github.samzhu.docmcp.infrastructure.vectorstore.DocumentChunkVectorStore.*;
 
 /**
  * 搜尋服務
@@ -30,18 +31,15 @@ import java.util.stream.StreamSupport;
 public class SearchService {
 
     private final DocumentRepository documentRepository;
-    private final DocumentChunkRepository chunkRepository;
     private final LibraryVersionRepository versionRepository;
-    private final EmbeddingService embeddingService;
+    private final VectorStore vectorStore;
 
     public SearchService(DocumentRepository documentRepository,
-                         DocumentChunkRepository chunkRepository,
                          LibraryVersionRepository versionRepository,
-                         EmbeddingService embeddingService) {
+                         VectorStore vectorStore) {
         this.documentRepository = documentRepository;
-        this.chunkRepository = chunkRepository;
         this.versionRepository = versionRepository;
-        this.embeddingService = embeddingService;
+        this.vectorStore = vectorStore;
     }
 
     /**
@@ -87,7 +85,7 @@ public class SearchService {
     /**
      * 語意搜尋
      * <p>
-     * 使用向量相似度進行語意搜尋，
+     * 使用 VectorStore 進行向量相似度搜尋，
      * 將查詢文字轉換為向量後，搜尋相似的文件區塊。
      * </p>
      *
@@ -110,20 +108,28 @@ public class SearchService {
             return List.of();
         }
 
-        // 將查詢轉換為向量
-        float[] queryEmbedding = embeddingService.embed(query);
-        String vectorString = embeddingService.toVectorString(queryEmbedding);
+        // 使用 VectorStore 執行語意搜尋
+        // 透過 filterExpression 限制搜尋範圍為特定版本
+        SearchRequest request = SearchRequest.builder()
+                .query(query)
+                .topK(limit)
+                .similarityThreshold(threshold)
+                .filterExpression(METADATA_VERSION_ID + " == '" + versionId.toString() + "'")
+                .build();
 
-        // 執行向量相似度搜尋
-        List<DocumentChunk> chunks = chunkRepository.findSimilarChunks(versionId, vectorString, limit);
+        List<org.springframework.ai.document.Document> results = vectorStore.similaritySearch(request);
 
-        if (chunks.isEmpty()) {
+        if (results.isEmpty()) {
             return List.of();
         }
 
-        // 批次取得相關文件資訊
-        List<UUID> documentIds = chunks.stream()
-                .map(DocumentChunk::documentId)
+        // 從結果中取得 document IDs 並批次查詢文件資訊
+        List<UUID> documentIds = results.stream()
+                .map(doc -> {
+                    Object docIdObj = doc.getMetadata().get(METADATA_DOCUMENT_ID);
+                    return docIdObj != null ? parseUuid(docIdObj.toString()) : null;
+                })
+                .filter(id -> id != null)
                 .distinct()
                 .toList();
 
@@ -131,30 +137,107 @@ public class SearchService {
                         documentRepository.findAllById(documentIds).spliterator(), false)
                 .collect(Collectors.toMap(Document::id, Function.identity()));
 
-        // 轉換為搜尋結果（包含相似度分數）
-        List<SearchResultItem> results = new ArrayList<>();
-        for (DocumentChunk chunk : chunks) {
-            Document doc = documentMap.get(chunk.documentId());
-            if (doc != null) {
-                // 計算餘弦相似度（pgvector 回傳的是距離，需要轉換）
-                double similarity = calculateCosineSimilarity(queryEmbedding, chunk.embedding());
+        // 轉換為搜尋結果
+        return results.stream()
+                .map(doc -> toSearchResultItem(doc, documentMap))
+                .filter(item -> item != null)
+                .toList();
+    }
 
-                // 篩選超過閾值的結果
-                if (similarity >= threshold) {
-                    results.add(SearchResultItem.fromChunk(
-                            doc.id(),
-                            chunk.id(),
-                            doc.title(),
-                            doc.path(),
-                            chunk.content(),
-                            similarity,
-                            chunk.chunkIndex()
-                    ));
-                }
-            }
+    /**
+     * 將 Spring AI Document 轉換為 SearchResultItem
+     */
+    private SearchResultItem toSearchResultItem(org.springframework.ai.document.Document doc,
+                                                 Map<UUID, Document> documentMap) {
+        Map<String, Object> metadata = doc.getMetadata();
+
+        // 取得 document ID
+        UUID documentId = parseUuid(getMetadataString(metadata, METADATA_DOCUMENT_ID));
+        if (documentId == null) {
+            return null;
         }
 
-        return results;
+        // 取得對應的文件資訊
+        Document dbDoc = documentMap.get(documentId);
+        if (dbDoc == null) {
+            return null;
+        }
+
+        // 取得 chunk ID 和其他資訊
+        UUID chunkId = parseUuid(doc.getId());
+        int chunkIndex = getMetadataInt(metadata, METADATA_CHUNK_INDEX, 0);
+        double score = getMetadataDouble(metadata, "score", 0.0);
+
+        return SearchResultItem.fromChunk(
+                dbDoc.id(),
+                chunkId,
+                dbDoc.title(),
+                dbDoc.path(),
+                doc.getText(),
+                score,
+                chunkIndex
+        );
+    }
+
+    /**
+     * 從 metadata 取得字串值
+     */
+    private String getMetadataString(Map<String, Object> metadata, String key) {
+        if (metadata == null || !metadata.containsKey(key)) {
+            return null;
+        }
+        Object value = metadata.get(key);
+        return value != null ? value.toString() : null;
+    }
+
+    /**
+     * 從 metadata 取得整數值
+     */
+    private int getMetadataInt(Map<String, Object> metadata, String key, int defaultValue) {
+        if (metadata == null || !metadata.containsKey(key)) {
+            return defaultValue;
+        }
+        Object value = metadata.get(key);
+        if (value instanceof Number) {
+            return ((Number) value).intValue();
+        }
+        try {
+            return Integer.parseInt(value.toString());
+        } catch (NumberFormatException e) {
+            return defaultValue;
+        }
+    }
+
+    /**
+     * 從 metadata 取得 double 值
+     */
+    private double getMetadataDouble(Map<String, Object> metadata, String key, double defaultValue) {
+        if (metadata == null || !metadata.containsKey(key)) {
+            return defaultValue;
+        }
+        Object value = metadata.get(key);
+        if (value instanceof Number) {
+            return ((Number) value).doubleValue();
+        }
+        try {
+            return Double.parseDouble(value.toString());
+        } catch (NumberFormatException e) {
+            return defaultValue;
+        }
+    }
+
+    /**
+     * 解析 UUID 字串
+     */
+    private UUID parseUuid(String str) {
+        if (str == null || str.isBlank()) {
+            return null;
+        }
+        try {
+            return UUID.fromString(str);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
     }
 
     /**
@@ -183,30 +266,5 @@ public class SearchService {
             return content;
         }
         return content.substring(0, maxLength) + "...";
-    }
-
-    /**
-     * 計算餘弦相似度
-     */
-    private double calculateCosineSimilarity(float[] a, float[] b) {
-        if (a == null || b == null || a.length != b.length) {
-            return 0.0;
-        }
-
-        double dotProduct = 0.0;
-        double normA = 0.0;
-        double normB = 0.0;
-
-        for (int i = 0; i < a.length; i++) {
-            dotProduct += a[i] * b[i];
-            normA += a[i] * a[i];
-            normB += b[i] * b[i];
-        }
-
-        if (normA == 0 || normB == 0) {
-            return 0.0;
-        }
-
-        return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
     }
 }

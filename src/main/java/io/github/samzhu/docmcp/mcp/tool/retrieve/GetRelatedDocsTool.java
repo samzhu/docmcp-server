@@ -5,7 +5,6 @@ import io.github.samzhu.docmcp.domain.model.DocumentChunk;
 import io.github.samzhu.docmcp.mcp.dto.GetRelatedDocsResult;
 import io.github.samzhu.docmcp.repository.DocumentChunkRepository;
 import io.github.samzhu.docmcp.repository.DocumentRepository;
-import io.github.samzhu.docmcp.service.EmbeddingService;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Component;
@@ -30,14 +29,11 @@ public class GetRelatedDocsTool {
 
     private final DocumentRepository documentRepository;
     private final DocumentChunkRepository chunkRepository;
-    private final EmbeddingService embeddingService;
 
     public GetRelatedDocsTool(DocumentRepository documentRepository,
-                              DocumentChunkRepository chunkRepository,
-                              EmbeddingService embeddingService) {
+                              DocumentChunkRepository chunkRepository) {
         this.documentRepository = documentRepository;
         this.chunkRepository = chunkRepository;
-        this.embeddingService = embeddingService;
     }
 
     /**
@@ -90,7 +86,7 @@ public class GetRelatedDocsTool {
         int maxResults = limit != null && limit > 0 ? limit : DEFAULT_LIMIT;
 
         // 搜尋相似區塊（排除來源文件）
-        String vectorString = embeddingService.toVectorString(sourceChunk.embedding());
+        String vectorString = toVectorString(sourceChunk.embedding());
         var similarChunks = chunkRepository.findSimilarChunksExcludingDocument(
                 docId, vectorString, maxResults * 2);  // 多取一些以確保去重後有足夠數量
 
@@ -168,5 +164,26 @@ public class GetRelatedDocsTool {
             return content;
         }
         return content.substring(0, maxLength) + "...";
+    }
+
+    /**
+     * 將 float[] 轉換為 PostgreSQL vector 字串格式
+     *
+     * @param embedding 向量陣列
+     * @return PostgreSQL vector 格式字串，如 "[0.1, 0.2, ...]"
+     */
+    private String toVectorString(float[] embedding) {
+        if (embedding == null || embedding.length == 0) {
+            throw new IllegalArgumentException("向量不得為空");
+        }
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < embedding.length; i++) {
+            if (i > 0) {
+                sb.append(",");
+            }
+            sb.append(embedding[i]);
+        }
+        sb.append("]");
+        return sb.toString();
     }
 }

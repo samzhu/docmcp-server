@@ -3,7 +3,6 @@ package io.github.samzhu.docmcp.service;
 import io.github.samzhu.docmcp.domain.enums.SyncStatus;
 import io.github.samzhu.docmcp.domain.model.CodeExample;
 import io.github.samzhu.docmcp.domain.model.Document;
-import io.github.samzhu.docmcp.domain.model.DocumentChunk;
 import io.github.samzhu.docmcp.domain.model.SyncHistory;
 import io.github.samzhu.docmcp.infrastructure.github.GitHubContentFetcher;
 import io.github.samzhu.docmcp.infrastructure.github.GitHubFile;
@@ -11,12 +10,14 @@ import io.github.samzhu.docmcp.infrastructure.github.strategy.FetchResult;
 import io.github.samzhu.docmcp.infrastructure.local.LocalFileClient;
 import io.github.samzhu.docmcp.infrastructure.parser.DocumentParser;
 import io.github.samzhu.docmcp.infrastructure.parser.ParsedDocument;
+import io.github.samzhu.docmcp.infrastructure.vectorstore.DocumentChunkConverter;
 import io.github.samzhu.docmcp.repository.CodeExampleRepository;
 import io.github.samzhu.docmcp.repository.DocumentChunkRepository;
 import io.github.samzhu.docmcp.repository.DocumentRepository;
 import io.github.samzhu.docmcp.repository.SyncHistoryRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -49,7 +50,8 @@ public class SyncService {
     private final LocalFileClient localFileClient;
     private final List<DocumentParser> parsers;
     private final DocumentChunker chunker;
-    private final EmbeddingService embeddingService;
+    private final VectorStore vectorStore;
+    private final DocumentChunkConverter chunkConverter;
     private final DocumentRepository documentRepository;
     private final DocumentChunkRepository chunkRepository;
     private final CodeExampleRepository codeExampleRepository;
@@ -59,7 +61,8 @@ public class SyncService {
                        LocalFileClient localFileClient,
                        List<DocumentParser> parsers,
                        DocumentChunker chunker,
-                       EmbeddingService embeddingService,
+                       VectorStore vectorStore,
+                       DocumentChunkConverter chunkConverter,
                        DocumentRepository documentRepository,
                        DocumentChunkRepository chunkRepository,
                        CodeExampleRepository codeExampleRepository,
@@ -68,7 +71,8 @@ public class SyncService {
         this.localFileClient = localFileClient;
         this.parsers = parsers;
         this.chunker = chunker;
-        this.embeddingService = embeddingService;
+        this.vectorStore = vectorStore;
+        this.chunkConverter = chunkConverter;
         this.documentRepository = documentRepository;
         this.chunkRepository = chunkRepository;
         this.codeExampleRepository = codeExampleRepository;
@@ -291,17 +295,24 @@ public class SyncService {
         document = documentRepository.save(document);
         UUID documentId = document.id();
 
-        // 分塊並建立嵌入
+        // 分塊並使用 VectorStore 批次建立嵌入
         List<DocumentChunker.ChunkResult> chunks = chunker.chunk(content);
-        int chunksCreated = 0;
 
-        for (DocumentChunker.ChunkResult chunkResult : chunks) {
-            float[] embedding = embeddingService.embed(chunkResult.content());
-            DocumentChunk chunk = DocumentChunk.create(documentId, chunkResult.index(),
-                    chunkResult.content(), embedding, chunkResult.tokenCount());
-            chunkRepository.save(chunk);
-            chunksCreated++;
-        }
+        // 建立 Spring AI Document 列表，由 VectorStore 自動生成 embedding
+        List<org.springframework.ai.document.Document> aiDocs = chunks.stream()
+                .map(chunkResult -> chunkConverter.createNewChunkDocument(
+                        versionId,
+                        documentId,
+                        chunkResult.index(),
+                        chunkResult.content(),
+                        chunkResult.tokenCount(),
+                        parsed.title(),
+                        path
+                ))
+                .toList();
+
+        // 使用 VectorStore.add() 批次儲存（自動 embed）
+        vectorStore.add(aiDocs);
 
         // 儲存程式碼範例
         for (ParsedDocument.CodeBlock codeBlock : parsed.codeBlocks()) {
@@ -310,7 +321,7 @@ public class SyncService {
             codeExampleRepository.save(example);
         }
 
-        return new SyncResult(chunksCreated, true);
+        return new SyncResult(chunks.size(), true);
     }
 
     /**
@@ -366,17 +377,24 @@ public class SyncService {
         document = documentRepository.save(document);
         UUID documentId = document.id();
 
-        // 分塊並建立嵌入
+        // 分塊並使用 VectorStore 批次建立嵌入
         List<DocumentChunker.ChunkResult> chunks = chunker.chunk(content);
-        int chunksCreated = 0;
 
-        for (DocumentChunker.ChunkResult chunkResult : chunks) {
-            float[] embedding = embeddingService.embed(chunkResult.content());
-            DocumentChunk chunk = DocumentChunk.create(documentId, chunkResult.index(),
-                    chunkResult.content(), embedding, chunkResult.tokenCount());
-            chunkRepository.save(chunk);
-            chunksCreated++;
-        }
+        // 建立 Spring AI Document 列表，由 VectorStore 自動生成 embedding
+        List<org.springframework.ai.document.Document> aiDocs = chunks.stream()
+                .map(chunkResult -> chunkConverter.createNewChunkDocument(
+                        versionId,
+                        documentId,
+                        chunkResult.index(),
+                        chunkResult.content(),
+                        chunkResult.tokenCount(),
+                        parsed.title(),
+                        file.path()
+                ))
+                .toList();
+
+        // 使用 VectorStore.add() 批次儲存（自動 embed）
+        vectorStore.add(aiDocs);
 
         // 儲存程式碼範例
         for (ParsedDocument.CodeBlock codeBlock : parsed.codeBlocks()) {
@@ -385,7 +403,7 @@ public class SyncService {
             codeExampleRepository.save(example);
         }
 
-        return new SyncResult(chunksCreated, true);
+        return new SyncResult(chunks.size(), true);
     }
 
     private boolean isSupportedFile(String path) {
