@@ -49,6 +49,8 @@ spring:
           text:
             options:
               model: gemini-embedding-001
+              # 指定輸出維度（gemini-embedding-001 預設 3072，需設為 768 與資料庫一致）
+              dimensions: 768
 
     # PgVector 向量儲存配置
     vectorstore:
@@ -71,6 +73,25 @@ management:
 
 # ----- DocMCP 功能開關配置 -----
 docmcp:
+  # ----- 已知函式庫文件路徑對應表 -----
+  # 用於自動帶入 GitHub 函式庫的文件路徑
+  # 支援兩種格式：
+  # 1. 簡單格式：直接是路徑字串（適用於無版本差異的函式庫）
+  # 2. 版本範圍格式：包含 default 和 versions（適用於有版本差異的函式庫）
+  known-docs-paths:
+    # Spring Boot: 4.x 與 3.x 目錄結構不同
+    spring-projects/spring-boot:
+      default: "documentation/spring-boot-docs/src/docs/antora"  # 4.x 預設
+      versions:
+        "3.*": "spring-boot-project/spring-boot-docs/src/docs/antora"  # 3.x
+    spring-projects/spring-framework: "framework-docs/modules/ROOT/pages"
+    facebook/react: "docs"
+    vuejs/vue: "docs"
+    kubernetes/kubernetes: "website/content/en/docs"
+    docker/docs: "content"
+    microsoft/TypeScript: "doc"
+    golang/go: "doc"
+
   features:
     web-ui: true            # 啟用 Web UI 介面
     api-key-auth: false     # API Key 認證（生產環境建議開啟）

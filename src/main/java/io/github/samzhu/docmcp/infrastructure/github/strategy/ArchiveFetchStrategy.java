@@ -8,12 +8,17 @@ import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
-import java.io.ByteArrayInputStream;
+import java.io.BufferedInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -84,34 +89,65 @@ public class ArchiveFetchStrategy implements GitHubFetchStrategy {
         String url = String.format(GITHUB_ARCHIVE_URL, owner, repo, ref);
         log.info("嘗試下載 Archive: {}", url);
 
+        // 使用 OS 暫存目錄，避免大檔案導致 OOM
+        Path tempFile = null;
         try {
-            // 下載 tarball
-            byte[] tarballBytes = restClient.get()
+            // 建立暫存檔（使用 OS 預設 temp 目錄）
+            tempFile = Files.createTempFile("docmcp-archive-", ".tar.gz");
+            log.debug("建立暫存檔: {}", tempFile);
+
+            // 串流下載到暫存檔，避免整個檔案載入記憶體
+            Resource resource = restClient.get()
                     .uri(url)
                     .retrieve()
-                    .body(byte[].class);
+                    .body(Resource.class);
 
-            if (tarballBytes == null || tarballBytes.length == 0) {
+            if (resource == null) {
                 log.warn("Archive 下載失敗：空回應");
                 return Optional.empty();
             }
 
-            log.info("Archive 下載成功，大小: {} bytes", tarballBytes.length);
+            // 串流寫入暫存檔
+            try (InputStream inputStream = resource.getInputStream();
+                 OutputStream outputStream = Files.newOutputStream(tempFile)) {
+                long bytesWritten = inputStream.transferTo(outputStream);
+                log.info("Archive 下載成功，大小: {} bytes，暫存於: {}", bytesWritten, tempFile);
+            }
 
-            // 解壓並提取檔案
-            return extractFiles(tarballBytes, owner, repo, path, ref);
+            // 從暫存檔解壓並提取檔案
+            return extractFilesFromPath(tempFile, owner, repo, path, ref);
 
         } catch (Exception e) {
             log.warn("Archive 策略失敗: {}", e.getMessage());
             return Optional.empty();
+        } finally {
+            // 清理暫存檔（成功或失敗都要刪除）
+            if (tempFile != null) {
+                try {
+                    Files.deleteIfExists(tempFile);
+                    log.debug("已刪除暫存檔: {}", tempFile);
+                } catch (IOException e) {
+                    log.warn("刪除暫存檔失敗: {} - {}", tempFile, e.getMessage());
+                }
+            }
         }
     }
 
     /**
-     * 解壓 tarball 並提取指定路徑下的檔案
+     * 從暫存檔解壓 tarball 並提取指定路徑下的檔案
+     * <p>
+     * 使用串流處理，避免將整個 tarball 載入記憶體
+     * </p>
+     *
+     * @param tarballPath 暫存檔路徑
+     * @param owner       儲存庫擁有者
+     * @param repo        儲存庫名稱
+     * @param targetPath  目標目錄路徑
+     * @param ref         Git 參考
+     * @return 取得結果
      */
-    private Optional<FetchResult> extractFiles(byte[] tarballBytes, String owner, String repo,
-                                                String targetPath, String ref) {
+    private Optional<FetchResult> extractFilesFromPath(Path tarballPath, String owner, String repo,
+                                                        String targetPath, String ref) {
         List<GitHubFile> files = new ArrayList<>();
         Map<String, String> contents = new HashMap<>();
 
@@ -126,8 +162,10 @@ public class ArchiveFetchStrategy implements GitHubFetchStrategy {
 
         log.debug("解壓 Archive，目標路徑: {}", targetPrefix);
 
-        try (ByteArrayInputStream bais = new ByteArrayInputStream(tarballBytes);
-             GzipCompressorInputStream gzis = new GzipCompressorInputStream(bais);
+        // 使用 BufferedInputStream 提高讀取效率
+        try (InputStream fis = Files.newInputStream(tarballPath);
+             BufferedInputStream bis = new BufferedInputStream(fis);
+             GzipCompressorInputStream gzis = new GzipCompressorInputStream(bis);
              TarArchiveInputStream tais = new TarArchiveInputStream(gzis)) {
 
             TarArchiveEntry entry;
@@ -153,7 +191,7 @@ public class ArchiveFetchStrategy implements GitHubFetchStrategy {
                     continue;
                 }
 
-                // 讀取檔案內容
+                // 讀取檔案內容（單一文件通常不會太大，可以載入記憶體）
                 byte[] contentBytes = tais.readNBytes((int) entry.getSize());
                 String content = new String(contentBytes, StandardCharsets.UTF_8);
 

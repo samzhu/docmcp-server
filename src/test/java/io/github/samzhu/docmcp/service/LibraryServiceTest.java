@@ -1,10 +1,12 @@
 package io.github.samzhu.docmcp.service;
 
+import io.github.samzhu.docmcp.config.KnownDocsPathsProperties;
 import io.github.samzhu.docmcp.domain.enums.SourceType;
 import io.github.samzhu.docmcp.domain.enums.VersionStatus;
 import io.github.samzhu.docmcp.domain.exception.LibraryNotFoundException;
 import io.github.samzhu.docmcp.domain.model.Library;
 import io.github.samzhu.docmcp.domain.model.LibraryVersion;
+import io.github.samzhu.docmcp.infrastructure.github.GitHubClient;
 import io.github.samzhu.docmcp.repository.LibraryRepository;
 import io.github.samzhu.docmcp.repository.LibraryVersionRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,11 +35,26 @@ class LibraryServiceTest {
     @Mock
     private LibraryVersionRepository libraryVersionRepository;
 
+    @Mock
+    private GitHubClient gitHubClient;
+
+    @Mock
+    private KnownDocsPathsProperties knownDocsPathsProperties;
+
+    @Mock
+    private SyncService syncService;
+
     private LibraryService libraryService;
 
     @BeforeEach
     void setUp() {
-        libraryService = new LibraryService(libraryRepository, libraryVersionRepository);
+        libraryService = new LibraryService(
+                libraryRepository,
+                libraryVersionRepository,
+                gitHubClient,
+                knownDocsPathsProperties,
+                syncService
+        );
     }
 
     @Test

@@ -6,6 +6,8 @@
     <title th:text="${pageTitle} ? ${pageTitle} + ' - DocMCP' : 'DocMCP'">DocMCP</title>
     <link rel="stylesheet" th:href="@{/css/style.css}">
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <!-- app.js 必須在 Alpine.js 之前載入，定義 syncModal 等函數 -->
+    <script th:src="@{/js/app.js}"></script>
     <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 </head>
 <body class="min-h-screen bg-gray-50">
@@ -24,7 +26,5 @@
             </main>
         </div>
     </div>
-
-    <script th:src="@{/js/app.js}"></script>
 </body>
 </html>

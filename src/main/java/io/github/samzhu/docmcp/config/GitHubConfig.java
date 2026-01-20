@@ -7,10 +7,10 @@ import org.springframework.context.annotation.Configuration;
 /**
  * GitHub 相關配置
  * <p>
- * 啟用 GitHub 內容取得的配置屬性。
+ * 啟用 GitHub 內容取得的配置屬性和已知函式庫文件路徑配置。
  * </p>
  */
 @Configuration
-@EnableConfigurationProperties(GitHubFetchProperties.class)
+@EnableConfigurationProperties({GitHubFetchProperties.class, KnownDocsPathsProperties.class})
 public class GitHubConfig {
 }

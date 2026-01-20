@@ -5,7 +5,10 @@ import io.github.samzhu.docmcp.domain.model.LibraryVersion;
 import io.github.samzhu.docmcp.domain.model.SyncHistory;
 import io.github.samzhu.docmcp.service.LibraryService;
 import io.github.samzhu.docmcp.service.SyncService;
+import io.github.samzhu.docmcp.web.dto.BatchSyncRequest;
+import io.github.samzhu.docmcp.web.dto.BatchSyncResponse;
 import io.github.samzhu.docmcp.web.dto.CreateLibraryRequest;
+import io.github.samzhu.docmcp.web.dto.GitHubReleasesResponse;
 import io.github.samzhu.docmcp.web.dto.LibraryVersionDto;
 import io.github.samzhu.docmcp.web.dto.SyncHistoryDto;
 import io.github.samzhu.docmcp.web.dto.TriggerSyncRequest;
@@ -175,5 +178,39 @@ public class LibraryApiController {
         ).join();
 
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(SyncHistoryDto.from(syncHistory));
+    }
+
+    /**
+     * 取得 GitHub Releases 列表
+     * <p>
+     * 從 GitHub API 取得指定函式庫的 Release 列表，並自動帶入已知的文件路徑。
+     * 已存在於系統中的版本會被標記。
+     * </p>
+     *
+     * @param id    函式庫 ID
+     * @param limit 回傳數量上限（預設 20）
+     * @return GitHub Releases 回應
+     */
+    @GetMapping("/{id}/github-releases")
+    public GitHubReleasesResponse getGitHubReleases(@PathVariable UUID id,
+                                                     @RequestParam(defaultValue = "20") int limit) {
+        return libraryService.getGitHubReleases(id, limit);
+    }
+
+    /**
+     * 批次建立版本並同步
+     * <p>
+     * 一次建立多個版本並觸發同步任務。
+     * </p>
+     *
+     * @param id      函式庫 ID
+     * @param request 批次同步請求
+     * @return 批次同步回應
+     */
+    @PostMapping("/{id}/batch-sync")
+    public ResponseEntity<BatchSyncResponse> batchSync(@PathVariable UUID id,
+                                                        @RequestBody @Valid BatchSyncRequest request) {
+        BatchSyncResponse response = libraryService.batchCreateAndSync(id, request);
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(response);
     }
 }

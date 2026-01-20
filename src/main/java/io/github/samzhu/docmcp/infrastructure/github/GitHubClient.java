@@ -203,7 +203,7 @@ public class GitHubClient {
         return new GitHubRelease(
                 node.path("id").asLong(),
                 node.path("tag_name").asText(),
-                node.path("name").asText(),
+                getTextOrNull(node, "name"),  // 正確處理 JSON null
                 node.path("body").asText(null),
                 node.path("draft").asBoolean(),
                 node.path("prerelease").asBoolean(),
@@ -211,6 +211,25 @@ public class GitHubClient {
                 node.path("tarball_url").asText(null),
                 node.path("zipball_url").asText(null)
         );
+    }
+
+    /**
+     * 安全取得 JSON 欄位文字值
+     * <p>
+     * Jackson 的 asText() 對 JSON null 會返回字串 "null"，
+     * 此方法正確處理 null 值，返回 Java null。
+     * </p>
+     *
+     * @param node      JSON 節點
+     * @param fieldName 欄位名稱
+     * @return 欄位值，若為 null 或不存在則返回 null
+     */
+    private String getTextOrNull(JsonNode node, String fieldName) {
+        JsonNode fieldNode = node.get(fieldName);
+        if (fieldNode == null || fieldNode.isNull()) {
+            return null;
+        }
+        return fieldNode.asText();
     }
 
     /**

@@ -13,6 +13,9 @@ import org.springframework.data.jdbc.core.convert.JdbcCustomConversions;
 import org.springframework.data.jdbc.repository.config.AbstractJdbcConfiguration;
 
 import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 
@@ -31,7 +34,8 @@ public class JdbcConfig extends AbstractJdbcConfiguration {
     public JdbcCustomConversions jdbcCustomConversions() {
         return new JdbcCustomConversions(List.of(
                 new MapToJsonbConverter(),
-                new JsonbToMapConverter()
+                new JsonbToMapConverter(),
+                new TimestampToOffsetDateTimeConverter()
         ));
     }
 
@@ -71,4 +75,19 @@ public class JdbcConfig extends AbstractJdbcConfiguration {
             }
         }
     }
+
+    /**
+     * Timestamp -> OffsetDateTime 讀取轉換器
+     */
+    @ReadingConverter
+    public static class TimestampToOffsetDateTimeConverter implements Converter<Timestamp, OffsetDateTime> {
+        @Override
+        public OffsetDateTime convert(Timestamp source) {
+            if (source == null) {
+                return null;
+            }
+            return source.toInstant().atOffset(ZoneOffset.UTC);
+        }
+    }
+
 }

@@ -1,0 +1,10 @@
+# 測試用配置：驗證版本範圍配置載入
+docmcp:
+  known-docs-paths:
+    # Spring Boot: 4.x 與 3.x 目錄結構不同
+    spring-projects/spring-boot:
+      default: "documentation/spring-boot-docs/src/docs/antora"
+      versions:
+        "3.*": "spring-boot-project/spring-boot-docs/src/docs/antora"
+    # 簡單格式
+    facebook/react: "docs"
