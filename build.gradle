@@ -37,7 +37,9 @@ dependencies {
 	implementation "org.htmlunit:htmlunit:4.21.0"
 	implementation "com.vladsch.flexmark:flexmark:0.64.8"
 	implementation "com.vladsch.flexmark:flexmark-html2md-converter:0.64.8"
-	implementation "org.asciidoctor:asciidoctorj:3.0.1"
+	implementation "org.asciidoctor:asciidoctorj:3.0.1" // https://central.sonatype.com/artifact/org.asciidoctor/asciidoctorj
+	// Apache Commons Compress for tar.gz extraction
+	implementation "org.apache.commons:commons-compress:1.28.0" // https://central.sonatype.com/artifact/org.apache.commons/commons-compress
 	developmentOnly 'org.springframework.boot:spring-boot-docker-compose'
 	// developmentOnly('org.springframework.ai:spring-ai-spring-boot-docker-compose') {
 	// 	// 排除不需要的 Docker Compose 支援

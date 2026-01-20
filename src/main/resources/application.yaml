@@ -84,6 +84,32 @@ docmcp:
   sync:
     cron: "0 0 2 * * *"  # 每天凌晨 2 點執行
 
+  # ----- GitHub 內容取得配置 -----
+  github:
+    fetch:
+      # 連線超時（毫秒）
+      connect-timeout-ms: 10000
+      # 讀取超時（毫秒）
+      read-timeout-ms: 30000
+      # Archive 策略（優先級 1：下載 tarball，最快、無 Rate Limit）
+      archive:
+        enabled: true
+        priority: 1
+      # Git Tree API 策略（優先級 2：1 次 API 呼叫取得目錄結構）
+      git-tree:
+        enabled: true
+        priority: 2
+      # Contents API 策略（優先級 3：遞迴呼叫，作為最終 fallback）
+      contents-api:
+        enabled: true
+        priority: 3
+        rate-limit:
+          delay-ms: 100              # 每次請求間隔（毫秒）
+          max-requests-per-sync: 500  # 單次同步最大請求數
+          retry-count: 3             # 失敗重試次數
+          retry-delay-ms: 1000       # 重試間隔（毫秒）
+          rate-limit-wait-ms: 60000  # 遇到 Rate Limit 時等待（毫秒）
+
   # ----- 安全配置 -----
   security:
     api-key:

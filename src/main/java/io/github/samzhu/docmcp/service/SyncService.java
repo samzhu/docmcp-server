@@ -5,8 +5,9 @@ import io.github.samzhu.docmcp.domain.model.CodeExample;
 import io.github.samzhu.docmcp.domain.model.Document;
 import io.github.samzhu.docmcp.domain.model.DocumentChunk;
 import io.github.samzhu.docmcp.domain.model.SyncHistory;
-import io.github.samzhu.docmcp.infrastructure.github.GitHubClient;
+import io.github.samzhu.docmcp.infrastructure.github.GitHubContentFetcher;
 import io.github.samzhu.docmcp.infrastructure.github.GitHubFile;
+import io.github.samzhu.docmcp.infrastructure.github.strategy.FetchResult;
 import io.github.samzhu.docmcp.infrastructure.local.LocalFileClient;
 import io.github.samzhu.docmcp.infrastructure.parser.DocumentParser;
 import io.github.samzhu.docmcp.infrastructure.parser.ParsedDocument;
@@ -44,7 +45,7 @@ public class SyncService {
 
     private static final Logger log = LoggerFactory.getLogger(SyncService.class);
 
-    private final GitHubClient gitHubClient;
+    private final GitHubContentFetcher gitHubContentFetcher;
     private final LocalFileClient localFileClient;
     private final List<DocumentParser> parsers;
     private final DocumentChunker chunker;
@@ -54,7 +55,7 @@ public class SyncService {
     private final CodeExampleRepository codeExampleRepository;
     private final SyncHistoryRepository syncHistoryRepository;
 
-    public SyncService(GitHubClient gitHubClient,
+    public SyncService(GitHubContentFetcher gitHubContentFetcher,
                        LocalFileClient localFileClient,
                        List<DocumentParser> parsers,
                        DocumentChunker chunker,
@@ -63,7 +64,7 @@ public class SyncService {
                        DocumentChunkRepository chunkRepository,
                        CodeExampleRepository codeExampleRepository,
                        SyncHistoryRepository syncHistoryRepository) {
-        this.gitHubClient = gitHubClient;
+        this.gitHubContentFetcher = gitHubContentFetcher;
         this.localFileClient = localFileClient;
         this.parsers = parsers;
         this.chunker = chunker;
@@ -103,9 +104,10 @@ public class SyncService {
             // 更新狀態為執行中
             syncHistory = updateSyncStatus(syncHistory, SyncStatus.RUNNING, null);
 
-            // 列出所有文件
-            List<GitHubFile> files = gitHubClient.listFilesRecursively(owner, repo, docsPath, ref);
-            log.info("Found {} files to sync", files.size());
+            // 使用策略模式取得所有文件（自動選擇最佳策略）
+            FetchResult fetchResult = gitHubContentFetcher.fetch(owner, repo, docsPath, ref);
+            List<GitHubFile> files = fetchResult.files();
+            log.info("Found {} files to sync using strategy: {}", files.size(), fetchResult.strategyUsed());
 
             int documentsProcessed = 0;
             int chunksCreated = 0;
@@ -114,7 +116,7 @@ public class SyncService {
             for (GitHubFile file : files) {
                 if (file.isFile() && isSupportedFile(file.path())) {
                     try {
-                        SyncResult result = processFile(versionId, owner, repo, file, ref);
+                        SyncResult result = processFile(versionId, owner, repo, file, ref, fetchResult);
                         documentsProcessed++;
                         chunksCreated += result.chunksCreated();
                     } catch (Exception e) {
@@ -127,8 +129,8 @@ public class SyncService {
             syncHistory = completeSyncHistory(syncHistory, SyncStatus.SUCCESS,
                     documentsProcessed, chunksCreated, null);
 
-            log.info("GitHub sync completed for version: {}. Processed {} documents, created {} chunks",
-                    versionId, documentsProcessed, chunksCreated);
+            log.info("GitHub sync completed for version: {}. Processed {} documents, created {} chunks (strategy: {})",
+                    versionId, documentsProcessed, chunksCreated, fetchResult.strategyUsed());
 
             return CompletableFuture.completedFuture(syncHistory);
 
@@ -313,12 +315,20 @@ public class SyncService {
 
     /**
      * 處理單一文件
+     *
+     * @param versionId   版本 ID
+     * @param owner       GitHub 儲存庫擁有者
+     * @param repo        GitHub 儲存庫名稱
+     * @param file        檔案資訊
+     * @param ref         Git 參考
+     * @param fetchResult 取得結果（可能包含預載入的內容）
+     * @return 同步結果
      */
     @Transactional
     protected SyncResult processFile(UUID versionId, String owner, String repo,
-                                      GitHubFile file, String ref) {
-        // 取得文件內容
-        String content = gitHubClient.getFileContent(owner, repo, file.path(), ref);
+                                      GitHubFile file, String ref, FetchResult fetchResult) {
+        // 取得文件內容（優先使用預載入內容，否則從 raw URL 下載）
+        String content = gitHubContentFetcher.getFileContent(fetchResult, owner, repo, file.path(), ref);
 
         // 計算內容雜湊
         String contentHash = calculateHash(content);

@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-一率使用繁體中文跟用戶說明, 程式碼都要寫上好閱讀的繁體中文註解
+程式碼都要寫上好理解的繁體中文註解
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
