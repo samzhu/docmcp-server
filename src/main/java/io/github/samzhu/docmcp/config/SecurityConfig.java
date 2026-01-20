@@ -1,7 +1,7 @@
 package io.github.samzhu.docmcp.config;
 
 import io.github.samzhu.docmcp.security.ApiKeyAuthenticationFilter;
-import io.github.samzhu.docmcp.security.RateLimitInterceptor;
+import io.github.samzhu.docmcp.security.ConcurrencyLimitInterceptor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -17,7 +17,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 /**
  * 安全配置
  * <p>
- * 配置 API Key 認證和 Rate Limiting。
+ * 配置 API Key 認證和併發限制。
  * </p>
  */
 @Configuration
@@ -25,12 +25,12 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 public class SecurityConfig implements WebMvcConfigurer {
 
     private final ApiKeyAuthenticationFilter apiKeyAuthenticationFilter;
-    private final RateLimitInterceptor rateLimitInterceptor;
+    private final ConcurrencyLimitInterceptor concurrencyLimitInterceptor;
 
     public SecurityConfig(ApiKeyAuthenticationFilter apiKeyAuthenticationFilter,
-                          RateLimitInterceptor rateLimitInterceptor) {
+                          ConcurrencyLimitInterceptor concurrencyLimitInterceptor) {
         this.apiKeyAuthenticationFilter = apiKeyAuthenticationFilter;
-        this.rateLimitInterceptor = rateLimitInterceptor;
+        this.concurrencyLimitInterceptor = concurrencyLimitInterceptor;
     }
 
     /**
@@ -95,12 +95,12 @@ public class SecurityConfig implements WebMvcConfigurer {
     }
 
     /**
-     * 註冊 Rate Limit 攔截器
+     * 註冊併發限制攔截器
      */
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(rateLimitInterceptor)
+        registry.addInterceptor(concurrencyLimitInterceptor)
                 .addPathPatterns("/mcp/**", "/api/**")
-                .excludePathPatterns("/api/keys/**");  // API Key 管理端點不限速
+                .excludePathPatterns("/api/keys/**");  // API Key 管理端點不限制
     }
 }

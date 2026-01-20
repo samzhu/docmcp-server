@@ -78,6 +78,7 @@ docmcp:
     code-examples: true     # 程式碼範例功能
     migration-guides: false # 遷移指南功能（P2 延後）
     sync-scheduling: false  # 同步排程功能（預設關閉）
+    concurrency-limit: true # 併發限制功能（生產環境建議開啟）
 
   # ----- 同步排程配置 -----
   sync:
@@ -90,9 +91,10 @@ docmcp:
       header-name: Authorization
       prefix: "Bearer "
       allow-anonymous: true  # 是否允許匿名存取非 MCP 端點
-      rate-limit:
-        enabled: true
-        requests-per-hour: 1000  # 預設每小時請求上限
+    # ----- 併發限制配置 -----
+    concurrency:
+      default-limit: 10  # 每個 API Key 同時請求上限
+      anonymous-limit: 5 # 匿名請求同時上限
 
 # ----- 日誌配置 -----
 logging:

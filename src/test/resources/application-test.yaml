@@ -27,3 +27,8 @@ logging:
   level:
     org.springframework.jdbc: DEBUG
     io.github.samzhu.docmcp: DEBUG
+
+# 功能開關（測試環境）
+docmcp:
+  features:
+    concurrency-limit: false  # 測試環境關閉併發限制

@@ -42,6 +42,11 @@ public class FeatureFlags {
      */
     private boolean syncScheduling = false;
 
+    /**
+     * 是否啟用併發限制功能
+     */
+    private boolean concurrencyLimit = true;
+
     public boolean isWebUi() {
         return webUi;
     }
@@ -88,5 +93,13 @@ public class FeatureFlags {
 
     public void setSyncScheduling(boolean syncScheduling) {
         this.syncScheduling = syncScheduling;
+    }
+
+    public boolean isConcurrencyLimit() {
+        return concurrencyLimit;
+    }
+
+    public void setConcurrencyLimit(boolean concurrencyLimit) {
+        this.concurrencyLimit = concurrencyLimit;
     }
 }

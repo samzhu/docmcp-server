@@ -25,3 +25,9 @@ logging:
   level:
     io.github.samzhu.docmcp: DEBUG
     org.springframework.ai: DEBUG
+
+# ----- 功能開關配置 -----
+# 開發環境關閉併發限制，方便測試
+docmcp:
+  features:
+    concurrency-limit: false
