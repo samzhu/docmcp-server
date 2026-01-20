@@ -1,12 +1,13 @@
 package io.github.samzhu.docmcp.infrastructure.vectorstore;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pgvector.PGvector;
+import org.postgresql.util.PGobject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.document.Document;
+import org.springframework.ai.document.DocumentMetadata;
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
@@ -23,7 +24,6 @@ import org.springframework.util.StringUtils;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -59,18 +59,21 @@ public class DocumentChunkVectorStore implements VectorStore {
     public static final String METADATA_DOCUMENT_TITLE = "documentTitle";
     public static final String METADATA_DOCUMENT_PATH = "documentPath";
 
-    // SQL 語句常數 - 參考 Spring AI PgVectorStore
+    // Google GenAI embedding API 限制每批最多 100 個請求
+    private static final int EMBEDDING_BATCH_SIZE = 100;
+
+    // SQL 語句常數 - 參考 Spring AI PgVectorStore，使用參數佔位符而非 EXCLUDED
     private static final String SQL_INSERT = """
         INSERT INTO document_chunks (id, document_id, chunk_index, content, embedding, token_count, metadata, created_at)
         VALUES (?::uuid, ?::uuid, ?, ?, ?, ?, ?::jsonb, CURRENT_TIMESTAMP)
         ON CONFLICT (id) DO UPDATE SET
-            content = EXCLUDED.content,
-            embedding = EXCLUDED.embedding,
-            token_count = EXCLUDED.token_count,
-            metadata = EXCLUDED.metadata
+            content = ?,
+            embedding = ?,
+            token_count = ?,
+            metadata = ?::jsonb
         """;
 
-    private static final String SQL_DELETE_BY_IDS = "DELETE FROM document_chunks WHERE id = ANY(?::uuid[])";
+    private static final String SQL_DELETE_BY_ID = "DELETE FROM document_chunks WHERE id = ?";
 
     // 相似度搜尋 SQL - 使用餘弦距離 (<=>)，參考 Spring AI 的格式
     // 注意：distance = 1 - similarity，所以 distance < threshold 等同於 similarity > (1 - threshold)
@@ -115,9 +118,6 @@ public class DocumentChunkVectorStore implements VectorStore {
         log.info("初始化 DocumentChunkVectorStore，向量維度: {}", dimensions);
     }
 
-    // Google GenAI embedding API 限制每批最多 100 個請求
-    private static final int EMBEDDING_BATCH_SIZE = 100;
-
     /**
      * 新增文件到向量儲存
      * <p>
@@ -160,14 +160,15 @@ public class DocumentChunkVectorStore implements VectorStore {
                     float[] embedding = embeddings.get(i);
                     PGvector pGvector = new PGvector(embedding);
 
-                    // 使用 StatementCreatorUtils 設定參數，TYPE_UNKNOWN 讓 JDBC 驅動自動判斷類型
+                    // 準備參數值
                     String id = doc.getId() != null ? doc.getId() : UUID.randomUUID().toString();
                     String documentId = getStringFromMetadata(metadata, METADATA_DOCUMENT_ID, UUID.randomUUID().toString());
                     int chunkIndex = getIntFromMetadata(metadata, METADATA_CHUNK_INDEX, 0);
                     String content = doc.getText();
                     int tokenCount = getIntFromMetadata(metadata, METADATA_TOKEN_COUNT, 0);
-                    String metadataJson = toJsonString(metadata);
+                    String metadataJson = toJson(metadata);
 
+                    // INSERT 部分的參數（1-7）
                     StatementCreatorUtils.setParameterValue(ps, 1, SqlTypeValue.TYPE_UNKNOWN, id);
                     StatementCreatorUtils.setParameterValue(ps, 2, SqlTypeValue.TYPE_UNKNOWN, documentId);
                     StatementCreatorUtils.setParameterValue(ps, 3, SqlTypeValue.TYPE_UNKNOWN, chunkIndex);
@@ -175,6 +176,12 @@ public class DocumentChunkVectorStore implements VectorStore {
                     StatementCreatorUtils.setParameterValue(ps, 5, SqlTypeValue.TYPE_UNKNOWN, pGvector);
                     StatementCreatorUtils.setParameterValue(ps, 6, SqlTypeValue.TYPE_UNKNOWN, tokenCount);
                     StatementCreatorUtils.setParameterValue(ps, 7, SqlTypeValue.TYPE_UNKNOWN, metadataJson);
+
+                    // UPDATE 部分的參數（8-11）- 參考官方風格，重複傳值
+                    StatementCreatorUtils.setParameterValue(ps, 8, SqlTypeValue.TYPE_UNKNOWN, content);
+                    StatementCreatorUtils.setParameterValue(ps, 9, SqlTypeValue.TYPE_UNKNOWN, pGvector);
+                    StatementCreatorUtils.setParameterValue(ps, 10, SqlTypeValue.TYPE_UNKNOWN, tokenCount);
+                    StatementCreatorUtils.setParameterValue(ps, 11, SqlTypeValue.TYPE_UNKNOWN, metadataJson);
                 }
 
                 @Override
@@ -189,6 +196,9 @@ public class DocumentChunkVectorStore implements VectorStore {
 
     /**
      * 依 ID 列表刪除文件
+     * <p>
+     * 參考 Spring AI PgVectorStore，使用 BatchPreparedStatementSetter 進行批次刪除。
+     * </p>
      *
      * @param idList 要刪除的文件 ID 列表
      */
@@ -201,14 +211,26 @@ public class DocumentChunkVectorStore implements VectorStore {
 
         log.info("刪除 {} 個文件區塊", idList.size());
 
-        String[] ids = idList.toArray(new String[0]);
-        jdbcTemplate.update(SQL_DELETE_BY_IDS, (Object) ids);
+        // 參考官方風格，使用 BatchPreparedStatementSetter
+        jdbcTemplate.batchUpdate(SQL_DELETE_BY_ID, new BatchPreparedStatementSetter() {
+            @Override
+            public void setValues(PreparedStatement ps, int i) throws SQLException {
+                String id = idList.get(i);
+                StatementCreatorUtils.setParameterValue(ps, 1, SqlTypeValue.TYPE_UNKNOWN, UUID.fromString(id));
+            }
+
+            @Override
+            public int getBatchSize() {
+                return idList.size();
+            }
+        });
     }
 
     /**
      * 依 Filter Expression 刪除文件
      * <p>
      * 將 Spring AI 的 Filter Expression 轉換為 JSONPath 查詢條件進行刪除。
+     * 參考 Spring AI PgVectorStore，使用 try-catch 處理例外。
      * </p>
      *
      * @param filterExpression 過濾條件表達式
@@ -220,17 +242,22 @@ public class DocumentChunkVectorStore implements VectorStore {
             return;
         }
 
-        String jsonPathFilter = filterExpressionConverter.convertExpression(filterExpression);
-        if (!StringUtils.hasText(jsonPathFilter)) {
+        String nativeFilterExpression = filterExpressionConverter.convertExpression(filterExpression);
+        if (!StringUtils.hasText(nativeFilterExpression)) {
             return;
         }
 
-        log.info("依條件刪除文件區塊，條件: {}", jsonPathFilter);
+        log.info("依條件刪除文件區塊，條件: {}", nativeFilterExpression);
 
-        String sql = "DELETE FROM document_chunks WHERE metadata::jsonb @@ '" + jsonPathFilter + "'::jsonpath";
-        int deleted = jdbcTemplate.update(sql);
+        String sql = "DELETE FROM document_chunks WHERE metadata::jsonb @@ '" + nativeFilterExpression + "'::jsonpath";
 
-        log.debug("已刪除 {} 個文件區塊", deleted);
+        // 參考官方風格，使用 try-catch 處理例外
+        try {
+            int deleted = jdbcTemplate.update(sql);
+            log.debug("已刪除 {} 個文件區塊", deleted);
+        } catch (Exception e) {
+            throw new IllegalStateException("依條件刪除文件失敗", e);
+        }
     }
 
     /**
@@ -299,16 +326,15 @@ public class DocumentChunkVectorStore implements VectorStore {
 
     /**
      * 將 Map 轉換為 JSON 字串
+     * <p>
+     * 參考 Spring AI PgVectorStore，失敗時拋出 RuntimeException 而非返回空物件。
+     * </p>
      */
-    private String toJsonString(Map<String, Object> map) {
-        if (map == null || map.isEmpty()) {
-            return "{}";
-        }
+    private String toJson(Map<String, Object> map) {
         try {
             return objectMapper.writeValueAsString(map);
         } catch (JsonProcessingException e) {
-            log.warn("JSON 序列化失敗，使用空物件", e);
-            return "{}";
+            throw new RuntimeException("JSON 序列化失敗", e);
         }
     }
 
@@ -345,11 +371,17 @@ public class DocumentChunkVectorStore implements VectorStore {
      * Document RowMapper
      * <p>
      * 將資料庫查詢結果轉換為 Spring AI Document 物件。
-     * distance 轉換為 similarity score (1 - distance)。
+     * 參考 Spring AI PgVectorStore 的 DocumentRowMapper 實作。
      * </p>
      */
     private static class DocumentRowMapper implements RowMapper<Document> {
-        private static final Logger log = LoggerFactory.getLogger(DocumentRowMapper.class);
+
+        // 欄位名稱常數 - 參考官方風格
+        private static final String COLUMN_ID = "id";
+        private static final String COLUMN_CONTENT = "content";
+        private static final String COLUMN_METADATA = "metadata";
+        private static final String COLUMN_DISTANCE = "distance";
+
         private final ObjectMapper objectMapper;
 
         public DocumentRowMapper(ObjectMapper objectMapper) {
@@ -358,34 +390,36 @@ public class DocumentChunkVectorStore implements VectorStore {
 
         @Override
         public Document mapRow(ResultSet rs, int rowNum) throws SQLException {
-            // 解析 metadata JSONB
-            Map<String, Object> metadata = parseMetadata(rs.getString("metadata"));
+            String id = rs.getString(COLUMN_ID);
+            String content = rs.getString(COLUMN_CONTENT);
+            PGobject pgMetadata = rs.getObject(COLUMN_METADATA, PGobject.class);
+            float distance = rs.getFloat(COLUMN_DISTANCE);
 
-            // 將 distance 轉換為 similarity score
-            try {
-                double distance = rs.getDouble("distance");
-                double similarity = 1 - distance;
-                metadata.put("score", similarity);
-            } catch (SQLException ignored) {
-                // 某些查詢可能沒有 distance 欄位
-            }
+            Map<String, Object> metadata = toMap(pgMetadata);
+            metadata.put(DocumentMetadata.DISTANCE.value(), distance);
 
-            // 建立 Document（Spring AI 2.0 的 Document 不再儲存 embedding）
-            return new Document(rs.getString("id"), rs.getString("content"), metadata);
+            // 參考官方風格，使用 Document.builder() 並設定 score
+            return Document.builder()
+                    .id(id)
+                    .text(content)
+                    .metadata(metadata)
+                    .score(1.0 - distance)
+                    .build();
         }
 
         /**
-         * 解析 JSONB 字串為 Map，使用 ObjectMapper
+         * 將 PGobject 轉換為 Map
+         * <p>
+         * 參考 Spring AI PgVectorStore，失敗時拋出 RuntimeException。
+         * </p>
          */
-        private Map<String, Object> parseMetadata(String json) {
-            if (json == null || json.isBlank() || "{}".equals(json)) {
-                return new HashMap<>();
-            }
+        @SuppressWarnings("unchecked")
+        private Map<String, Object> toMap(PGobject pgObject) {
+            String source = pgObject.getValue();
             try {
-                return objectMapper.readValue(json, new TypeReference<Map<String, Object>>() {});
+                return (Map<String, Object>) objectMapper.readValue(source, Map.class);
             } catch (JsonProcessingException e) {
-                log.warn("JSON 解析失敗: {}", e.getMessage());
-                return new HashMap<>();
+                throw new RuntimeException("JSON 解析失敗", e);
             }
         }
     }
