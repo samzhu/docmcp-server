@@ -1,11 +1,12 @@
 package io.github.samzhu.docmcp.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.samzhu.docmcp.infrastructure.vectorstore.DocumentChunkVectorStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.ai.vectorstore.VectorStore;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.ai.vectorstore.pgvector.autoconfigure.PgVectorStoreProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -34,14 +35,16 @@ public class VectorStoreConfig {
      * <ul>
      *   <li>批次 embedding 生成（使用 EmbeddingModel）</li>
      *   <li>向量相似度搜尋（使用 pgvector）</li>
-     *   <li>透過 metadata 進行過濾（支援 versionId 等）</li>
+     *   <li>透過 JSONPath 進行 metadata 過濾</li>
+     *   <li>使用 JdbcTemplate + PGvector 物件（參考 Spring AI 官方實作）</li>
      *   <li>與 Spring AI RAG Advisor 等功能相容</li>
      * </ul>
      * </p>
      *
-     * @param jdbcTemplate   JDBC 操作模板
-     * @param embeddingModel 嵌入模型（Google GenAI 或 Mock）
-     * @param dimensions     向量維度（從配置讀取，預設 768）
+     * @param jdbcTemplate            JDBC 操作模板
+     * @param embeddingModel          嵌入模型（Google GenAI 或 Mock）
+     * @param objectMapper            JSON 序列化工具
+     * @param pgVectorStoreProperties PgVector 配置屬性（從 spring.ai.vectorstore.pgvector.* 讀取）
      * @return VectorStore 實例
      */
     @Bean
@@ -49,10 +52,12 @@ public class VectorStoreConfig {
     public VectorStore documentChunkVectorStore(
             JdbcTemplate jdbcTemplate,
             EmbeddingModel embeddingModel,
-            @Value("${spring.ai.vectorstore.pgvector.dimensions:768}") int dimensions) {
+            ObjectMapper objectMapper,
+            PgVectorStoreProperties pgVectorStoreProperties) {
 
+        int dimensions = pgVectorStoreProperties.getDimensions();
         log.info("初始化 DocumentChunkVectorStore，向量維度: {}", dimensions);
 
-        return new DocumentChunkVectorStore(jdbcTemplate, embeddingModel, dimensions);
+        return new DocumentChunkVectorStore(jdbcTemplate, embeddingModel, objectMapper, dimensions);
     }
 }
