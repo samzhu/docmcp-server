@@ -15,6 +15,8 @@ import org.springframework.ai.vectorstore.filter.FilterExpressionConverter;
 import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
+import org.springframework.jdbc.core.SqlTypeValue;
+import org.springframework.jdbc.core.StatementCreatorUtils;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
@@ -149,21 +151,30 @@ public class DocumentChunkVectorStore implements VectorStore {
             List<float[]> embeddings = embeddingModel.embed(texts);
 
             // 使用 JdbcTemplate.batchUpdate 進行批次插入
+            // 參考 Spring AI PgVectorStore，使用 StatementCreatorUtils 設定參數
             jdbcTemplate.batchUpdate(SQL_INSERT, new BatchPreparedStatementSetter() {
                 @Override
                 public void setValues(PreparedStatement ps, int i) throws SQLException {
                     Document doc = batch.get(i);
                     Map<String, Object> metadata = doc.getMetadata();
                     float[] embedding = embeddings.get(i);
+                    PGvector pGvector = new PGvector(embedding);
 
-                    // 設定參數
-                    ps.setString(1, doc.getId() != null ? doc.getId() : UUID.randomUUID().toString());
-                    ps.setString(2, getStringFromMetadata(metadata, METADATA_DOCUMENT_ID, UUID.randomUUID().toString()));
-                    ps.setInt(3, getIntFromMetadata(metadata, METADATA_CHUNK_INDEX, 0));
-                    ps.setString(4, doc.getText());
-                    ps.setObject(5, new PGvector(embedding));
-                    ps.setInt(6, getIntFromMetadata(metadata, METADATA_TOKEN_COUNT, 0));
-                    ps.setString(7, toJsonString(metadata));
+                    // 使用 StatementCreatorUtils 設定參數，TYPE_UNKNOWN 讓 JDBC 驅動自動判斷類型
+                    String id = doc.getId() != null ? doc.getId() : UUID.randomUUID().toString();
+                    String documentId = getStringFromMetadata(metadata, METADATA_DOCUMENT_ID, UUID.randomUUID().toString());
+                    int chunkIndex = getIntFromMetadata(metadata, METADATA_CHUNK_INDEX, 0);
+                    String content = doc.getText();
+                    int tokenCount = getIntFromMetadata(metadata, METADATA_TOKEN_COUNT, 0);
+                    String metadataJson = toJsonString(metadata);
+
+                    StatementCreatorUtils.setParameterValue(ps, 1, SqlTypeValue.TYPE_UNKNOWN, id);
+                    StatementCreatorUtils.setParameterValue(ps, 2, SqlTypeValue.TYPE_UNKNOWN, documentId);
+                    StatementCreatorUtils.setParameterValue(ps, 3, SqlTypeValue.TYPE_UNKNOWN, chunkIndex);
+                    StatementCreatorUtils.setParameterValue(ps, 4, SqlTypeValue.TYPE_UNKNOWN, content);
+                    StatementCreatorUtils.setParameterValue(ps, 5, SqlTypeValue.TYPE_UNKNOWN, pGvector);
+                    StatementCreatorUtils.setParameterValue(ps, 6, SqlTypeValue.TYPE_UNKNOWN, tokenCount);
+                    StatementCreatorUtils.setParameterValue(ps, 7, SqlTypeValue.TYPE_UNKNOWN, metadataJson);
                 }
 
                 @Override
