@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/default :: html(content=~{::main-content}, pageTitle=${pageTitle}, currentPage=${currentPage})}">
+<head>
+    <meta charset="UTF-8">
+</head>
+<body>
+    <div th:fragment="main-content">
+        <!-- Breadcrumb -->
+        <nav class="mb-4">
+            <ol class="flex items-center space-x-2 text-sm">
+                <li><a th:href="@{/libraries}" class="text-gray-500 hover:text-gray-700">Libraries</a></li>
+                <li class="text-gray-400">/</li>
+                <li><a th:href="@{/libraries/{id}(id=${library.id()})}" class="text-gray-500 hover:text-gray-700" th:text="${library.displayName()}">Library</a></li>
+                <li class="text-gray-400">/</li>
+                <li class="text-gray-900" th:text="${version.version()}">1.0.0</li>
+            </ol>
+        </nav>
+
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-6">
+            <div>
+                <h2 class="text-2xl font-bold text-gray-900">Documents</h2>
+                <p class="text-sm text-gray-500 mt-1">
+                    <span th:text="${library.displayName()}">Library</span>
+                    <span class="mx-2">&middot;</span>
+                    <span th:text="${version.version()}" class="font-mono">1.0.0</span>
+                    <span th:if="${version.isLatest()}" class="ml-2 badge badge-success">Latest</span>
+                    <span th:if="${version.isLts()}" class="ml-2 badge badge-info">LTS</span>
+                </p>
+            </div>
+        </div>
+
+        <!-- Empty State -->
+        <div th:if="${#lists.isEmpty(documents)}" class="card">
+            <div class="empty-state">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                <p class="text-lg font-medium">No documents yet</p>
+                <p class="text-sm mt-2">Sync this version to import documents</p>
+                <a th:href="@{/libraries/{id}(id=${library.id()})}" class="btn btn-primary mt-4">Go to Library</a>
+            </div>
+        </div>
+
+        <!-- Document List -->
+        <div th:if="${!#lists.isEmpty(documents)}" class="card">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Path</th>
+                        <th>Type</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="doc : ${documents}">
+                        <td>
+                            <a th:href="@{/documents/{id}(id=${doc.id()})}"
+                               th:text="${doc.title()}"
+                               class="text-indigo-600 hover:text-indigo-800 font-medium">Document Title</a>
+                        </td>
+                        <td class="font-mono text-sm text-gray-500" th:text="${doc.path()}">docs/getting-started.md</td>
+                        <td>
+                            <span class="badge badge-secondary" th:text="${doc.docType()} ?: 'unknown'">markdown</span>
+                        </td>
+                        <td>
+                            <a th:href="@{/documents/{id}(id=${doc.id()})}"
+                               class="text-sm text-indigo-600 hover:text-indigo-800">View</a>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+</html>

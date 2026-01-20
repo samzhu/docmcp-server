@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/default :: html(content=~{::main-content}, pageTitle=${pageTitle}, currentPage=${currentPage})}">
+<head>
+    <meta charset="UTF-8">
+</head>
+<body>
+    <div th:fragment="main-content">
+        <!-- Breadcrumb -->
+        <nav class="mb-4">
+            <ol class="flex items-center space-x-2 text-sm">
+                <li><a th:href="@{/libraries}" class="text-gray-500 hover:text-gray-700">Libraries</a></li>
+                <li class="text-gray-400">/</li>
+                <li><a th:href="@{/libraries/{id}(id=${library.id()})}" class="text-gray-500 hover:text-gray-700" th:text="${library.displayName()}">Library</a></li>
+                <li class="text-gray-400">/</li>
+                <li><a th:href="@{/documents(versionId=${version.id()})}" class="text-gray-500 hover:text-gray-700" th:text="${version.version()}">1.0.0</a></li>
+                <li class="text-gray-400">/</li>
+                <li class="text-gray-900 truncate max-w-xs" th:text="${document.title()}">Document Title</li>
+            </ol>
+        </nav>
+
+        <!-- Document Header -->
+        <div class="card mb-6">
+            <div class="flex items-start justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900" th:text="${document.title()}">Document Title</h1>
+                    <p class="text-sm text-gray-500 font-mono mt-1" th:text="${document.path()}">docs/getting-started.md</p>
+                </div>
+                <div class="space-x-2">
+                    <span class="badge badge-secondary" th:text="${document.docType()} ?: 'unknown'">markdown</span>
+                </div>
+            </div>
+
+            <div class="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
+                <div>
+                    <dt class="text-sm text-gray-500">Library</dt>
+                    <dd class="font-medium" th:text="${library.displayName()}">Spring Boot</dd>
+                </div>
+                <div>
+                    <dt class="text-sm text-gray-500">Version</dt>
+                    <dd class="font-medium font-mono" th:text="${version.version()}">3.2.0</dd>
+                </div>
+                <div th:if="${document.updatedAt()}">
+                    <dt class="text-sm text-gray-500">Last Updated</dt>
+                    <dd class="font-medium" th:text="${#temporals.format(document.updatedAt(), 'yyyy-MM-dd HH:mm')}">2024-01-15 10:30</dd>
+                </div>
+            </div>
+        </div>
+
+        <!-- Document Content -->
+        <div class="card">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Content</h2>
+            <div class="prose prose-indigo max-w-none">
+                <pre class="bg-gray-50 p-4 rounded-lg overflow-x-auto text-sm"><code th:text="${document.content()}">Document content here...</code></pre>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

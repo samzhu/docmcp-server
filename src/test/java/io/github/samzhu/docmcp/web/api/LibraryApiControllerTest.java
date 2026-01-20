@@ -259,6 +259,7 @@ class LibraryApiControllerTest {
                 libraryId,
                 version,
                 isLatest,
+                false,
                 VersionStatus.ACTIVE,
                 "docs",
                 null,

@@ -195,6 +195,18 @@ public class LibraryService {
     }
 
     /**
+     * 根據版本 ID 取得版本
+     *
+     * @param versionId 版本 ID
+     * @return 版本
+     * @throws LibraryNotFoundException 若版本不存在
+     */
+    public LibraryVersion getVersionById(UUID versionId) {
+        return libraryVersionRepository.findById(versionId)
+                .orElseThrow(() -> new LibraryNotFoundException("版本不存在: " + versionId));
+    }
+
+    /**
      * 解析後的函式庫資訊
      *
      * @param library         函式庫

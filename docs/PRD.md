@@ -1,7 +1,7 @@
 # DocMCP Server - Product Requirements Document (PRD)
 
-> **版本**：1.5.0
-> **最後更新**：2026-01-19
+> **版本**：1.6.0
+> **最後更新**：2026-01-20
 > **狀態**：Draft
 > **作者**：samzhu
 
@@ -1297,7 +1297,7 @@ docmcp:
 
 #### 8.3.2 其他安全措施
 
-- HTTPS 支援
+- HTTPS 支援（由外部處理，如 Cloud Run、Nginx 等反向代理）
 - SQL Injection 防護 (使用 Spring Data JDBC 參數化查詢)
 - 輸入驗證 (Jakarta Validation)
 - Rate Limiting (基於 API Key)
@@ -1375,3 +1375,4 @@ docmcp:
 | 1.3.0 | 2026-01-19 | 新增繁體中文詳細註解說明 | samzhu |
 | 1.4.0 | 2026-01-19 | 更新為 gemini-embedding-001（text-embedding-004 已於 2026/1/14 停用），使用 768 維度以符合 2GB RAM 限制，修正 JEP 444 描述 | samzhu |
 | 1.5.0 | 2026-01-19 | MCP 協議改為 STATELESS（適合雲端部署、無狀態水平擴展），修正 spring.ai.mcp.server.protocol 設定 | samzhu |
+| 1.6.0 | 2026-01-20 | 明確 HTTPS 由外部處理（Cloud Run 等反向代理），應用層不需處理 | samzhu |

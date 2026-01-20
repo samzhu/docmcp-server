@@ -100,6 +100,7 @@ class ResolveLibraryToolTest {
                 libraryId,
                 version,
                 isLatest,
+                false,
                 VersionStatus.ACTIVE,
                 null,
                 null,

@@ -29,6 +29,15 @@ public interface DocumentRepository extends CrudRepository<Document, UUID> {
     List<Document> findByVersionId(@Param("versionId") UUID versionId);
 
     /**
+     * 取得指定版本的所有文件（依路徑排序）
+     *
+     * @param versionId 版本 ID
+     * @return 依路徑排序的文件列表
+     */
+    @Query("SELECT * FROM documents WHERE version_id = :versionId ORDER BY path ASC")
+    List<Document> findByVersionIdOrderByPathAsc(@Param("versionId") UUID versionId);
+
+    /**
      * 根據版本 ID 和路徑查找文件
      *
      * @param versionId 版本 ID

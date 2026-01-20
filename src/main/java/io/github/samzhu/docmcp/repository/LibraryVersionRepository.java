@@ -63,4 +63,21 @@ public interface LibraryVersionRepository extends CrudRepository<LibraryVersion,
             @Param("libraryId") UUID libraryId,
             @Param("status") VersionStatus status
     );
+
+    /**
+     * 查找指定函式庫的 LTS 版本
+     *
+     * @param libraryId 函式庫 ID
+     * @return LTS 版本（若存在）
+     */
+    @Query("SELECT * FROM library_versions WHERE library_id = :libraryId AND is_lts = true ORDER BY created_at DESC LIMIT 1")
+    Optional<LibraryVersion> findLtsByLibraryId(@Param("libraryId") UUID libraryId);
+
+    /**
+     * 取得所有 LTS 版本
+     *
+     * @return LTS 版本列表
+     */
+    @Query("SELECT * FROM library_versions WHERE is_lts = true ORDER BY created_at DESC")
+    List<LibraryVersion> findAllLts();
 }

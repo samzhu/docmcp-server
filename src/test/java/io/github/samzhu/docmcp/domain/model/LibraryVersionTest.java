@@ -32,4 +32,25 @@ class LibraryVersionTest {
 
         assertThat(version.isLatest()).isFalse();
     }
+
+    @Test
+    void shouldCreateVersionWithIsLtsField() {
+        // 測試建立帶有 LTS 標記的版本
+        var libraryId = UUID.randomUUID();
+        var version = LibraryVersion.create(libraryId, "3.2.0", true);
+
+        // 預設 isLts 應為 false
+        assertThat(version.isLts()).isFalse();
+    }
+
+    @Test
+    void shouldCreateLtsVersionWithCreateLts() {
+        // 測試使用 createLts 建立 LTS 版本
+        var libraryId = UUID.randomUUID();
+        var version = LibraryVersion.createLts(libraryId, "3.2.0", true);
+
+        assertThat(version.isLts()).isTrue();
+        assertThat(version.isLatest()).isTrue();
+        assertThat(version.status()).isEqualTo(VersionStatus.ACTIVE);
+    }
 }

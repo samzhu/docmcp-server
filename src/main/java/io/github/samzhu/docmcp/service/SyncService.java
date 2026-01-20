@@ -7,6 +7,7 @@ import io.github.samzhu.docmcp.domain.model.DocumentChunk;
 import io.github.samzhu.docmcp.domain.model.SyncHistory;
 import io.github.samzhu.docmcp.infrastructure.github.GitHubClient;
 import io.github.samzhu.docmcp.infrastructure.github.GitHubFile;
+import io.github.samzhu.docmcp.infrastructure.local.LocalFileClient;
 import io.github.samzhu.docmcp.infrastructure.parser.DocumentParser;
 import io.github.samzhu.docmcp.infrastructure.parser.ParsedDocument;
 import io.github.samzhu.docmcp.repository.CodeExampleRepository;
@@ -19,7 +20,9 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.time.OffsetDateTime;
 import java.util.HexFormat;
@@ -42,6 +45,7 @@ public class SyncService {
     private static final Logger log = LoggerFactory.getLogger(SyncService.class);
 
     private final GitHubClient gitHubClient;
+    private final LocalFileClient localFileClient;
     private final List<DocumentParser> parsers;
     private final DocumentChunker chunker;
     private final EmbeddingService embeddingService;
@@ -51,6 +55,7 @@ public class SyncService {
     private final SyncHistoryRepository syncHistoryRepository;
 
     public SyncService(GitHubClient gitHubClient,
+                       LocalFileClient localFileClient,
                        List<DocumentParser> parsers,
                        DocumentChunker chunker,
                        EmbeddingService embeddingService,
@@ -59,6 +64,7 @@ public class SyncService {
                        CodeExampleRepository codeExampleRepository,
                        SyncHistoryRepository syncHistoryRepository) {
         this.gitHubClient = gitHubClient;
+        this.localFileClient = localFileClient;
         this.parsers = parsers;
         this.chunker = chunker;
         this.embeddingService = embeddingService;
@@ -168,6 +174,141 @@ public class SyncService {
             return syncHistoryRepository.findByVersionIdOrderByStartedAtDescLimit(versionId, limit);
         }
         return syncHistoryRepository.findAllOrderByStartedAtDesc(limit);
+    }
+
+    /**
+     * 從本地文件系統同步文件（非同步執行）
+     *
+     * @param versionId 版本 ID
+     * @param localPath 本地目錄路徑
+     * @param pattern   glob 模式（如 "**\/*.md"）
+     * @return 同步歷史（非同步結果）
+     */
+    @Async
+    public CompletableFuture<SyncHistory> syncFromLocal(UUID versionId, Path localPath, String pattern) {
+        log.info("Starting local sync for version: {} from path={} pattern={}",
+                versionId, localPath, pattern);
+
+        // 檢查是否有正在執行的同步任務
+        if (syncHistoryRepository.hasRunningSyncTask(versionId)) {
+            log.warn("Sync task already running for version: {}", versionId);
+            throw new SyncException("Already running a sync task for this version");
+        }
+
+        // 建立同步記錄
+        SyncHistory syncHistory = createSyncHistory(versionId);
+
+        try {
+            // 更新狀態為執行中
+            syncHistory = updateSyncStatus(syncHistory, SyncStatus.RUNNING, null);
+
+            // 讀取本地文件
+            List<LocalFileClient.FileContent> files = localFileClient.readDirectory(localPath, pattern);
+            log.info("Found {} files to sync from local", files.size());
+
+            int documentsProcessed = 0;
+            int chunksCreated = 0;
+
+            // 處理每個文件
+            for (LocalFileClient.FileContent file : files) {
+                if (isSupportedFile(file.path())) {
+                    try {
+                        SyncResult result = processLocalFile(versionId, file);
+                        if (result.processed()) {
+                            documentsProcessed++;
+                            chunksCreated += result.chunksCreated();
+                        }
+                    } catch (Exception e) {
+                        log.error("Failed to process local file: {}", file.path(), e);
+                    }
+                }
+            }
+
+            // 更新狀態為成功
+            syncHistory = completeSyncHistory(syncHistory, SyncStatus.SUCCESS,
+                    documentsProcessed, chunksCreated, null);
+
+            log.info("Local sync completed for version: {}. Processed {} documents, created {} chunks",
+                    versionId, documentsProcessed, chunksCreated);
+
+            return CompletableFuture.completedFuture(syncHistory);
+
+        } catch (IOException e) {
+            log.error("Local sync failed for version: {} - IO error", versionId, e);
+            syncHistory = completeSyncHistory(syncHistory, SyncStatus.FAILED, 0, 0, e.getMessage());
+            return CompletableFuture.completedFuture(syncHistory);
+
+        } catch (Exception e) {
+            log.error("Local sync failed for version: {}", versionId, e);
+            syncHistory = completeSyncHistory(syncHistory, SyncStatus.FAILED, 0, 0, e.getMessage());
+            return CompletableFuture.completedFuture(syncHistory);
+        }
+    }
+
+    /**
+     * 處理本地文件
+     */
+    @Transactional
+    protected SyncResult processLocalFile(UUID versionId, LocalFileClient.FileContent file) {
+        String content = file.content();
+        String path = file.path();
+
+        // 計算內容雜湊
+        String contentHash = calculateHash(content);
+
+        // 檢查是否已存在且內容相同
+        Optional<Document> existingDoc = documentRepository.findByVersionIdAndPath(versionId, path);
+        if (existingDoc.isPresent() && contentHash.equals(existingDoc.get().contentHash())) {
+            log.debug("Skipping unchanged local file: {}", path);
+            return new SyncResult(0, false);
+        }
+
+        // 找到適合的解析器
+        DocumentParser parser = findParser(path);
+        if (parser == null) {
+            log.warn("No parser found for local file: {}", path);
+            return new SyncResult(0, false);
+        }
+
+        // 解析文件
+        ParsedDocument parsed = parser.parse(content, path);
+
+        // 刪除舊資料（如果存在）
+        if (existingDoc.isPresent()) {
+            UUID docId = existingDoc.get().id();
+            codeExampleRepository.findByDocumentId(docId)
+                    .forEach(ex -> codeExampleRepository.delete(ex));
+            chunkRepository.findByDocumentIdOrderByChunkIndex(docId)
+                    .forEach(chunk -> chunkRepository.delete(chunk));
+            documentRepository.delete(existingDoc.get());
+        }
+
+        // 儲存文件
+        Document document = Document.create(versionId, parsed.title(), path,
+                content, contentHash, parser.getDocType());
+        document = documentRepository.save(document);
+        UUID documentId = document.id();
+
+        // 分塊並建立嵌入
+        List<DocumentChunker.ChunkResult> chunks = chunker.chunk(content);
+        int chunksCreated = 0;
+
+        for (DocumentChunker.ChunkResult chunkResult : chunks) {
+            float[] embedding = embeddingService.embed(chunkResult.content());
+            DocumentChunk chunk = DocumentChunk.create(documentId, chunkResult.index(),
+                    chunkResult.content(), embedding, chunkResult.tokenCount());
+            chunkRepository.save(chunk);
+            chunksCreated++;
+        }
+
+        // 儲存程式碼範例
+        for (ParsedDocument.CodeBlock codeBlock : parsed.codeBlocks()) {
+            CodeExample example = CodeExample.create(documentId, codeBlock.language(),
+                    codeBlock.code(), codeBlock.description());
+            codeExampleRepository.save(example);
+        }
+
+        return new SyncResult(chunksCreated, true);
     }
 
     /**

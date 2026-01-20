@@ -13,13 +13,14 @@ import java.util.UUID;
  * 函式庫版本實體
  * <p>
  * 每個函式庫可以有多個版本，文件會關聯到特定版本。
- * 支援標記最新版本及版本狀態（ACTIVE、DEPRECATED、EOL）。
+ * 支援標記最新版本、LTS 版本及版本狀態（ACTIVE、DEPRECATED、EOL）。
  * </p>
  *
  * @param id          唯一識別碼
  * @param libraryId   所屬函式庫 ID
  * @param version     版本號（如 3.2.0）
  * @param isLatest    是否為最新版本
+ * @param isLts       是否為 LTS（Long-Term Support）版本
  * @param status      版本狀態
  * @param docsPath    文件路徑
  * @param releaseDate 發布日期
@@ -32,6 +33,7 @@ public record LibraryVersion(
         @Column("library_id") UUID libraryId,
         String version,
         @Column("is_latest") Boolean isLatest,
+        @Column("is_lts") Boolean isLts,
         VersionStatus status,
         @Column("docs_path") String docsPath,
         @Column("release_date") LocalDate releaseDate,
@@ -42,7 +44,15 @@ public record LibraryVersion(
      * 建立新的版本（使用預設值）
      */
     public static LibraryVersion create(UUID libraryId, String version, boolean isLatest) {
-        return new LibraryVersion(null, libraryId, version, isLatest,
+        return new LibraryVersion(null, libraryId, version, isLatest, false,
+                VersionStatus.ACTIVE, null, null, null, null);
+    }
+
+    /**
+     * 建立新的 LTS 版本
+     */
+    public static LibraryVersion createLts(UUID libraryId, String version, boolean isLatest) {
+        return new LibraryVersion(null, libraryId, version, isLatest, true,
                 VersionStatus.ACTIVE, null, null, null, null);
     }
 }

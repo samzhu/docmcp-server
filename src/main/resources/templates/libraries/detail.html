@@ -104,6 +104,7 @@
                         <td>
                             <span th:text="${version.version()}" class="font-mono">1.0.0</span>
                             <span th:if="${version.isLatest()}" class="ml-2 badge badge-success">Latest</span>
+                            <span th:if="${version.isLts()}" class="ml-2 badge badge-info">LTS</span>
                         </td>
                         <td>
                             <span th:switch="${version.status().name()}">
@@ -126,7 +127,11 @@
                             </span>
                             <span th:if="${syncStatuses[__${iterStat.index}__] == null}" class="text-gray-400">Never</span>
                         </td>
-                        <td>
+                        <td class="space-x-2">
+                            <a th:href="@{/documents(versionId=${version.id()})}"
+                               class="text-sm text-indigo-600 hover:text-indigo-800">
+                                Browse Docs
+                            </a>
                             <button type="button"
                                     class="text-sm text-indigo-600 hover:text-indigo-800"
                                     th:data-sync-library="${library.id()}"

@@ -69,8 +69,21 @@ management:
       probes:
         enabled: true
 
-# ----- DocMCP 安全配置 -----
+# ----- DocMCP 功能開關配置 -----
 docmcp:
+  features:
+    web-ui: true            # 啟用 Web UI 介面
+    api-key-auth: false     # API Key 認證（生產環境建議開啟）
+    semantic-search: true   # 語意搜尋功能
+    code-examples: true     # 程式碼範例功能
+    migration-guides: false # 遷移指南功能（P2 延後）
+    sync-scheduling: false  # 同步排程功能（預設關閉）
+
+  # ----- 同步排程配置 -----
+  sync:
+    cron: "0 0 2 * * *"  # 每天凌晨 2 點執行
+
+  # ----- 安全配置 -----
   security:
     api-key:
       enabled: false  # 預設關閉 API Key 認證（生產環境應設為 true）

@@ -222,7 +222,7 @@ class DocumentServiceTest {
     }
 
     private LibraryVersion createVersion(UUID id, UUID libraryId, String version, boolean isLatest) {
-        return new LibraryVersion(id, libraryId, version, isLatest, null,
+        return new LibraryVersion(id, libraryId, version, isLatest, false, null,
                 null, null, null, null);
     }
 }

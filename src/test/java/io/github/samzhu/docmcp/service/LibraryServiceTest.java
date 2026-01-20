@@ -152,6 +152,7 @@ class LibraryServiceTest {
                 libraryId,
                 version,
                 isLatest,
+                false,
                 VersionStatus.ACTIVE,
                 null,
                 null,

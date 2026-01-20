@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS library_versions (
     library_id UUID NOT NULL REFERENCES libraries(id) ON DELETE CASCADE,
     version VARCHAR(50) NOT NULL,
     is_latest BOOLEAN DEFAULT FALSE,
+    is_lts BOOLEAN DEFAULT FALSE,
     status VARCHAR(20) DEFAULT 'ACTIVE',
     docs_path VARCHAR(500),
     release_date DATE,
@@ -39,6 +40,9 @@ CREATE TABLE IF NOT EXISTS library_versions (
 
 COMMENT ON TABLE library_versions IS '儲存每個函式庫的版本資訊';
 COMMENT ON COLUMN library_versions.status IS '版本狀態: ACTIVE, DEPRECATED, EOL';
+
+-- 遷移：為已存在的 library_versions 表添加 is_lts 欄位（使用 IF NOT EXISTS 語法）
+ALTER TABLE library_versions ADD COLUMN IF NOT EXISTS is_lts BOOLEAN DEFAULT FALSE;
 
 -- 建立 documents 表（文件表）
 CREATE TABLE IF NOT EXISTS documents (
@@ -135,6 +139,7 @@ CREATE INDEX IF NOT EXISTS idx_libraries_source_type ON libraries(source_type);
 -- Library versions 索引
 CREATE INDEX IF NOT EXISTS idx_library_versions_library_id ON library_versions(library_id);
 CREATE INDEX IF NOT EXISTS idx_library_versions_is_latest ON library_versions(is_latest) WHERE is_latest = TRUE;
+CREATE INDEX IF NOT EXISTS idx_library_versions_is_lts ON library_versions(is_lts) WHERE is_lts = TRUE;
 CREATE INDEX IF NOT EXISTS idx_library_versions_status ON library_versions(status);
 
 -- Documents 索引

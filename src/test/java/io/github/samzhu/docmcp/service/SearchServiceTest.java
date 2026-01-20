@@ -257,7 +257,7 @@ class SearchServiceTest {
 
     // Helper methods
     private LibraryVersion createLibraryVersion(UUID id, UUID libraryId, String version, boolean isLatest) {
-        return new LibraryVersion(id, libraryId, version, isLatest, null,
+        return new LibraryVersion(id, libraryId, version, isLatest, false, null,
                 null, null, null, null);
     }
 
