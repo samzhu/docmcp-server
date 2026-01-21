@@ -6,70 +6,69 @@
 </head>
 <body>
     <div th:fragment="main-content">
-        <!-- Stats Overview -->
-        <div class="grid grid-cols-1 gap-6 mb-6 sm:grid-cols-2 md:grid-cols-3">
+        <!-- 統計概覽卡片 -->
+        <div class="stats-grid mb-6">
+            <!-- Libraries 統計 -->
             <div class="stat-card">
-                <div class="flex items-center">
-                    <div class="p-3 rounded-full bg-indigo-100 text-indigo-600">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                  d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
-                        </svg>
-                    </div>
-                    <div class="ml-4">
-                        <p class="stat-value" th:text="${libraryCount}">0</p>
-                        <p class="stat-label">Libraries</p>
-                    </div>
+                <div class="stat-icon blue">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                    </svg>
+                </div>
+                <div>
+                    <p class="stat-value" th:text="${libraryCount}">0</p>
+                    <p class="stat-label">Libraries</p>
                 </div>
             </div>
 
+            <!-- Documents 統計 -->
             <div class="stat-card">
-                <div class="flex items-center">
-                    <div class="p-3 rounded-full bg-green-100 text-green-600">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                  d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                        </svg>
-                    </div>
-                    <div class="ml-4">
-                        <p class="stat-value" th:text="${documentCount}">0</p>
-                        <p class="stat-label">Documents</p>
-                    </div>
+                <div class="stat-icon green">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                </div>
+                <div>
+                    <p class="stat-value" th:text="${documentCount}">0</p>
+                    <p class="stat-label">Documents</p>
                 </div>
             </div>
 
+            <!-- Chunks 統計 -->
             <div class="stat-card">
-                <div class="flex items-center">
-                    <div class="p-3 rounded-full bg-yellow-100 text-yellow-600">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                  d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"/>
-                        </svg>
-                    </div>
-                    <div class="ml-4">
-                        <p class="stat-value" th:text="${chunkCount}">0</p>
-                        <p class="stat-label">Chunks</p>
-                    </div>
+                <div class="stat-icon yellow">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"/>
+                    </svg>
+                </div>
+                <div>
+                    <p class="stat-value" th:text="${chunkCount}">0</p>
+                    <p class="stat-label">Chunks</p>
                 </div>
             </div>
         </div>
 
-        <!-- Recent Sync History -->
-        <div class="card">
+        <!-- 最近同步活動 -->
+        <div class="glass-card-static mb-6">
             <div class="flex items-center justify-between mb-4">
-                <h2 class="text-lg font-semibold text-gray-900">Recent Sync Activity</h2>
-                <a th:href="@{/api/sync/history}" class="text-sm text-indigo-600 hover:text-indigo-800">View all</a>
+                <h2 class="text-lg font-semibold text-primary">Recent Sync Activity</h2>
+                <a th:href="@{/api/sync/history}" class="text-sm text-accent">View all</a>
             </div>
 
+            <!-- 空狀態 -->
             <div th:if="${#lists.isEmpty(recentSyncs)}" class="empty-state">
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                           d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                 </svg>
-                <p>No sync activity yet</p>
+                <p class="font-medium">No sync activity yet</p>
                 <p class="text-sm mt-2">Start by adding a library and triggering a sync</p>
             </div>
 
+            <!-- 同步記錄表格 -->
             <table th:if="${!#lists.isEmpty(recentSyncs)}" class="table">
                 <thead>
                     <tr>
@@ -97,34 +96,32 @@
             </table>
         </div>
 
-        <!-- Quick Actions -->
-        <div class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <a th:href="@{/libraries/new}" class="card hover:bg-gray-50 transition-colors">
-                <div class="flex items-center">
-                    <div class="p-3 rounded-full bg-indigo-100 text-indigo-600">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                        </svg>
-                    </div>
-                    <div class="ml-4">
-                        <h3 class="font-medium text-gray-900">Add Library</h3>
-                        <p class="text-sm text-gray-500">Register a new documentation library</p>
-                    </div>
+        <!-- 快速操作 -->
+        <div class="action-cards-grid">
+            <!-- 新增 Library -->
+            <a th:href="@{/libraries/new}" class="action-card">
+                <div class="action-card-icon bg-indigo-100 text-accent">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                    </svg>
+                </div>
+                <div class="action-card-content">
+                    <h3>Add Library</h3>
+                    <p>Register a new documentation library</p>
                 </div>
             </a>
 
-            <a th:href="@{/search}" class="card hover:bg-gray-50 transition-colors">
-                <div class="flex items-center">
-                    <div class="p-3 rounded-full bg-green-100 text-green-600">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                        </svg>
-                    </div>
-                    <div class="ml-4">
-                        <h3 class="font-medium text-gray-900">Test Search</h3>
-                        <p class="text-sm text-gray-500">Try full-text and semantic search</p>
-                    </div>
+            <!-- 測試搜尋 -->
+            <a th:href="@{/search}" class="action-card">
+                <div class="action-card-icon bg-green-100 text-success">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                </div>
+                <div class="action-card-content">
+                    <h3>Test Search</h3>
+                    <p>Try full-text and semantic search</p>
                 </div>
             </a>
         </div>

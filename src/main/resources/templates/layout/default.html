@@ -4,27 +4,51 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title th:text="${pageTitle} ? ${pageTitle} + ' - DocMCP' : 'DocMCP'">DocMCP</title>
+    <!-- 載入樣式表 -->
     <link rel="stylesheet" th:href="@{/css/style.css}">
+    <!-- HTMX 用於動態更新 -->
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <!-- app.js 必須在 Alpine.js 之前載入，定義 syncModal 等函數 -->
     <script th:src="@{/js/app.js}"></script>
+    <!-- Alpine.js 用於元件互動 -->
     <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
 </head>
-<body class="min-h-screen bg-gray-50">
-    <div class="flex h-screen">
-        <!-- Sidebar -->
+<body>
+    <!-- 主要版面配置：側邊欄 + 內容區 -->
+    <div class="app-layout">
+        <!-- 側邊欄遮罩（行動版） -->
+        <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
+
+        <!-- 側邊欄（固定定位） -->
         <aside th:replace="~{fragments/sidebar :: sidebar}"></aside>
 
-        <!-- Main Content -->
-        <div class="flex-1 flex flex-col overflow-hidden">
-            <!-- Header -->
-            <header th:replace="~{fragments/header :: header}"></header>
+        <!-- 主內容區 -->
+        <div class="app-main">
+            <!-- 頁首（玻璃效果，黏性定位） -->
+            <header class="app-header" th:replace="~{fragments/header :: header}"></header>
 
-            <!-- Page Content -->
-            <main class="flex-1 overflow-y-auto p-6">
+            <!-- 頁面內容 -->
+            <main class="app-content">
                 <div th:replace="${content}"></div>
             </main>
         </div>
+
+        <!-- 行動版選單按鈕 -->
+        <button class="mobile-menu-btn" onclick="toggleSidebar()" aria-label="Toggle menu">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+            </svg>
+        </button>
     </div>
+
+    <script>
+        // 行動版側邊欄切換
+        function toggleSidebar() {
+            const sidebar = document.querySelector('.sidebar');
+            const overlay = document.querySelector('.sidebar-overlay');
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('active');
+        }
+    </script>
 </body>
 </html>

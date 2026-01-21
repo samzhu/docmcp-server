@@ -11,6 +11,20 @@ spring:
     # 引入本地機敏設定檔（optional: 檔案不存在也不報錯）
     import: "optional:file:./config/application-secrets.properties"
 
+  # ----- Thymeleaf 開發設定 -----
+  # 關閉快取，從原始碼目錄讀取，修改立即生效
+  thymeleaf:
+    cache: false
+    prefix: file:src/main/resources/templates/
+
+  # ----- 靜態資源開發設定 -----
+  # 從原始碼目錄讀取，修改後重整瀏覽器即可
+  web:
+    resources:
+      static-locations: file:src/main/resources/static/
+      cache:
+        period: 0
+
 # ----- Actuator 配置 -----
 # 開發環境開啟更多端點便於除錯
 management:

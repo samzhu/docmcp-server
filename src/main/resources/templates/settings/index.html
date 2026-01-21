@@ -6,98 +6,101 @@
 </head>
 <body>
     <div th:fragment="main-content">
-        <!-- Feature Flags Section -->
-        <div class="card mb-6">
-            <h2 class="text-lg font-semibold text-gray-900 mb-4">Feature Flags</h2>
-            <p class="text-sm text-gray-500 mb-4">Current status of feature toggles. Configure via <code class="bg-gray-100 px-1 rounded">docmcp.features.*</code> properties.</p>
+        <!-- Feature Flags 區塊 -->
+        <div class="glass-card-static mb-6">
+            <h2 class="text-lg font-semibold text-primary mb-4">Feature Flags</h2>
+            <p class="text-sm text-secondary mb-4">
+                Current status of feature toggles. Configure via
+                <code class="px-1 py-0.5 bg-gray-100 rounded text-sm font-mono">docmcp.features.*</code> properties.
+            </p>
 
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div class="feature-flags-grid">
                 <!-- Web UI -->
-                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div class="flex items-center">
-                        <svg class="w-5 h-5 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="feature-card">
+                    <div class="feature-card-info">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                   d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
                         </svg>
-                        <span class="text-sm font-medium text-gray-700">Web UI</span>
+                        <span>Web UI</span>
                     </div>
                     <span th:if="${webUiEnabled}" class="badge badge-success">Enabled</span>
                     <span th:unless="${webUiEnabled}" class="badge badge-secondary">Disabled</span>
                 </div>
 
                 <!-- API Key Auth -->
-                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div class="flex items-center">
-                        <svg class="w-5 h-5 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="feature-card">
+                    <div class="feature-card-info">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                   d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
                         </svg>
-                        <span class="text-sm font-medium text-gray-700">API Key Auth</span>
+                        <span>API Key Auth</span>
                     </div>
                     <span th:if="${apiKeyAuthEnabled}" class="badge badge-success">Enabled</span>
                     <span th:unless="${apiKeyAuthEnabled}" class="badge badge-secondary">Disabled</span>
                 </div>
 
                 <!-- Semantic Search -->
-                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div class="flex items-center">
-                        <svg class="w-5 h-5 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="feature-card">
+                    <div class="feature-card-info">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                   d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                         </svg>
-                        <span class="text-sm font-medium text-gray-700">Semantic Search</span>
+                        <span>Semantic Search</span>
                     </div>
                     <span th:if="${semanticSearchEnabled}" class="badge badge-success">Enabled</span>
                     <span th:unless="${semanticSearchEnabled}" class="badge badge-secondary">Disabled</span>
                 </div>
 
                 <!-- Code Examples -->
-                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div class="flex items-center">
-                        <svg class="w-5 h-5 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="feature-card">
+                    <div class="feature-card-info">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                   d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
                         </svg>
-                        <span class="text-sm font-medium text-gray-700">Code Examples</span>
+                        <span>Code Examples</span>
                     </div>
                     <span th:if="${codeExamplesEnabled}" class="badge badge-success">Enabled</span>
                     <span th:unless="${codeExamplesEnabled}" class="badge badge-secondary">Disabled</span>
                 </div>
 
                 <!-- Migration Guides -->
-                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div class="flex items-center">
-                        <svg class="w-5 h-5 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="feature-card">
+                    <div class="feature-card-info">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                   d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                         </svg>
-                        <span class="text-sm font-medium text-gray-700">Migration Guides</span>
+                        <span>Migration Guides</span>
                     </div>
                     <span th:if="${migrationGuidesEnabled}" class="badge badge-success">Enabled</span>
                     <span th:unless="${migrationGuidesEnabled}" class="badge badge-secondary">Disabled</span>
                 </div>
 
                 <!-- Sync Scheduling -->
-                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div class="flex items-center">
-                        <svg class="w-5 h-5 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="feature-card">
+                    <div class="feature-card-info">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                   d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
                         </svg>
-                        <span class="text-sm font-medium text-gray-700">Sync Scheduling</span>
+                        <span>Sync Scheduling</span>
                     </div>
                     <span th:if="${syncSchedulingEnabled}" class="badge badge-success">Enabled</span>
                     <span th:unless="${syncSchedulingEnabled}" class="badge badge-secondary">Disabled</span>
                 </div>
 
                 <!-- Concurrency Limit -->
-                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                    <div class="flex items-center">
-                        <svg class="w-5 h-5 mr-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="feature-card">
+                    <div class="feature-card-info">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                   d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
                         </svg>
-                        <span class="text-sm font-medium text-gray-700">Concurrency Limit</span>
+                        <span>Concurrency Limit</span>
                     </div>
                     <span th:if="${concurrencyLimitEnabled}" class="badge badge-success">Enabled</span>
                     <span th:unless="${concurrencyLimitEnabled}" class="badge badge-secondary">Disabled</span>
@@ -105,57 +108,56 @@
             </div>
         </div>
 
-        <!-- Sync Settings Section -->
-        <div class="card mb-6">
-            <h2 class="text-lg font-semibold text-gray-900 mb-4">Sync Settings</h2>
-            <p class="text-sm text-gray-500 mb-4">Configuration for automated documentation synchronization.</p>
+        <!-- Sync Settings 區塊 -->
+        <div class="glass-card-static mb-6">
+            <h2 class="text-lg font-semibold text-primary mb-4">Sync Settings</h2>
+            <p class="text-sm text-secondary mb-4">Configuration for automated documentation synchronization.</p>
 
-            <div class="bg-gray-50 rounded-lg p-4">
+            <div class="info-card">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-sm font-medium text-gray-700">Cron Schedule</p>
-                        <p class="text-xs text-gray-500 mt-1">When sync-scheduling is enabled, sync runs on this schedule</p>
+                        <p class="text-sm font-medium text-primary">Cron Schedule</p>
+                        <p class="text-xs text-secondary mt-1">When sync-scheduling is enabled, sync runs on this schedule</p>
                     </div>
-                    <code class="bg-gray-200 px-3 py-1 rounded text-sm font-mono" th:text="${syncCron}">0 0 2 * * *</code>
+                    <code class="px-3 py-1 bg-gray-200 rounded text-sm font-mono" th:text="${syncCron}">0 0 2 * * *</code>
                 </div>
             </div>
 
-            <div th:if="${!syncSchedulingEnabled}" class="mt-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-                <div class="flex">
-                    <svg class="w-5 h-5 text-yellow-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-                    </svg>
-                    <p class="text-sm text-yellow-700">
-                        Sync scheduling is currently disabled. Enable it by setting <code class="bg-yellow-100 px-1 rounded">docmcp.features.sync-scheduling=true</code>
-                    </p>
-                </div>
+            <div th:if="${!syncSchedulingEnabled}" class="mt-4 warning-box">
+                <svg fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                </svg>
+                <p>
+                    Sync scheduling is currently disabled. Enable it by setting
+                    <code class="px-1 bg-yellow-100 rounded">docmcp.features.sync-scheduling=true</code>
+                </p>
             </div>
         </div>
 
-        <!-- System Information Section -->
-        <div class="card">
-            <h2 class="text-lg font-semibold text-gray-900 mb-4">System Information</h2>
-            <p class="text-sm text-gray-500 mb-4">Runtime environment details.</p>
+        <!-- System Information 區塊 -->
+        <div class="glass-card-static">
+            <h2 class="text-lg font-semibold text-primary mb-4">System Information</h2>
+            <p class="text-sm text-secondary mb-4">Runtime environment details.</p>
 
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div class="bg-gray-50 rounded-lg p-4">
-                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Application Version</p>
-                    <p class="mt-1 text-lg font-semibold text-gray-900" th:text="${version}">0.0.1-SNAPSHOT</p>
+            <div class="two-col-grid">
+                <div class="info-card">
+                    <p class="info-card-label">Application Version</p>
+                    <p class="info-card-value" th:text="${version}">0.0.1-SNAPSHOT</p>
                 </div>
 
-                <div class="bg-gray-50 rounded-lg p-4">
-                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Java Version</p>
-                    <p class="mt-1 text-lg font-semibold text-gray-900" th:text="${javaVersion}">21</p>
+                <div class="info-card">
+                    <p class="info-card-label">Java Version</p>
+                    <p class="info-card-value" th:text="${javaVersion}">21</p>
                 </div>
 
-                <div class="bg-gray-50 rounded-lg p-4">
-                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Operating System</p>
-                    <p class="mt-1 text-lg font-semibold text-gray-900" th:text="${osName}">Linux</p>
+                <div class="info-card">
+                    <p class="info-card-label">Operating System</p>
+                    <p class="info-card-value" th:text="${osName}">Linux</p>
                 </div>
 
-                <div class="bg-gray-50 rounded-lg p-4">
-                    <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">OS Version</p>
-                    <p class="mt-1 text-lg font-semibold text-gray-900" th:text="${osVersion}">5.15.0</p>
+                <div class="info-card">
+                    <p class="info-card-label">OS Version</p>
+                    <p class="info-card-value" th:text="${osVersion}">5.15.0</p>
                 </div>
             </div>
         </div>

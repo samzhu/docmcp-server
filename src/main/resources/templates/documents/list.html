@@ -6,22 +6,20 @@
 </head>
 <body>
     <div th:fragment="main-content">
-        <!-- Breadcrumb -->
-        <nav class="mb-4">
-            <ol class="flex items-center space-x-2 text-sm">
-                <li><a th:href="@{/libraries}" class="text-gray-500 hover:text-gray-700">Libraries</a></li>
-                <li class="text-gray-400">/</li>
-                <li><a th:href="@{/libraries/{id}(id=${library.id()})}" class="text-gray-500 hover:text-gray-700" th:text="${library.displayName()}">Library</a></li>
-                <li class="text-gray-400">/</li>
-                <li class="text-gray-900" th:text="${version.version()}">1.0.0</li>
-            </ol>
+        <!-- 麵包屑導航 -->
+        <nav class="breadcrumb">
+            <a th:href="@{/libraries}">Libraries</a>
+            <span class="breadcrumb-separator">/</span>
+            <a th:href="@{/libraries/{id}(id=${library.id()})}" th:text="${library.displayName()}">Library</a>
+            <span class="breadcrumb-separator">/</span>
+            <span class="breadcrumb-current" th:text="${version.version()}">1.0.0</span>
         </nav>
 
-        <!-- Header -->
+        <!-- 頁首 -->
         <div class="flex items-center justify-between mb-6">
             <div>
-                <h2 class="text-2xl font-bold text-gray-900">Documents</h2>
-                <p class="text-sm text-gray-500 mt-1">
+                <h2 class="text-2xl font-bold text-primary">Documents</h2>
+                <p class="text-sm text-secondary mt-1">
                     <span th:text="${library.displayName()}">Library</span>
                     <span class="mx-2">&middot;</span>
                     <span th:text="${version.version()}" class="font-mono">1.0.0</span>
@@ -31,8 +29,8 @@
             </div>
         </div>
 
-        <!-- Empty State -->
-        <div th:if="${#lists.isEmpty(documents)}" class="card">
+        <!-- 空狀態 -->
+        <div th:if="${#lists.isEmpty(documents)}" class="glass-card-static">
             <div class="empty-state">
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -44,8 +42,8 @@
             </div>
         </div>
 
-        <!-- Document List -->
-        <div th:if="${!#lists.isEmpty(documents)}" class="card">
+        <!-- 文件列表 -->
+        <div th:if="${!#lists.isEmpty(documents)}" class="glass-card-static">
             <table class="table">
                 <thead>
                     <tr>
@@ -60,15 +58,15 @@
                         <td>
                             <a th:href="@{/documents/{id}(id=${doc.id()})}"
                                th:text="${doc.title()}"
-                               class="text-indigo-600 hover:text-indigo-800 font-medium">Document Title</a>
+                               class="text-accent font-medium">Document Title</a>
                         </td>
-                        <td class="font-mono text-sm text-gray-500" th:text="${doc.path()}">docs/getting-started.md</td>
+                        <td class="font-mono text-sm text-secondary" th:text="${doc.path()}">docs/getting-started.md</td>
                         <td>
                             <span class="badge badge-secondary" th:text="${doc.docType()} ?: 'unknown'">markdown</span>
                         </td>
                         <td>
                             <a th:href="@{/documents/{id}(id=${doc.id()})}"
-                               class="text-sm text-indigo-600 hover:text-indigo-800">View</a>
+                               class="text-sm text-accent">View</a>
                         </td>
                     </tr>
                 </tbody>

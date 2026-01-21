@@ -6,21 +6,19 @@
 </head>
 <body>
     <div th:fragment="main-content" x-data="syncModal()">
-        <!-- Breadcrumb -->
-        <nav class="mb-4">
-            <ol class="flex items-center space-x-2 text-sm">
-                <li><a th:href="@{/libraries}" class="text-gray-500 hover:text-gray-700">Libraries</a></li>
-                <li class="text-gray-400">/</li>
-                <li class="text-gray-900" th:text="${library.displayName()}">Library Name</li>
-            </ol>
+        <!-- 麵包屑導航 -->
+        <nav class="breadcrumb">
+            <a th:href="@{/libraries}">Libraries</a>
+            <span class="breadcrumb-separator">/</span>
+            <span class="breadcrumb-current" th:text="${library.displayName()}">Library Name</span>
         </nav>
 
-        <!-- Header -->
-        <div class="card mb-6">
+        <!-- Library 資訊卡片 -->
+        <div class="glass-card-static mb-6">
             <div class="flex items-start justify-between">
                 <div>
-                    <h1 class="text-2xl font-bold text-gray-900" th:text="${library.displayName()}">Library Name</h1>
-                    <p class="text-sm text-gray-500 font-mono mt-1" th:text="${library.name()}">library-name</p>
+                    <h1 class="text-2xl font-bold text-primary" th:text="${library.displayName()}">Library Name</h1>
+                    <p class="text-sm text-secondary font-mono mt-1" th:text="${library.name()}">library-name</p>
                 </div>
                 <div class="space-x-2">
                     <a th:href="@{/libraries/{id}/edit(id=${library.id()})}" class="btn btn-secondary">Edit</a>
@@ -31,49 +29,50 @@
                 </div>
             </div>
 
+            <!-- 描述 -->
             <div th:if="${library.description()}" class="mt-4">
-                <p class="text-gray-600" th:text="${library.description()}">Description</p>
+                <p class="text-secondary" th:text="${library.description()}">Description</p>
             </div>
 
+            <!-- 屬性資訊網格 -->
             <div class="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
-                <div>
-                    <dt class="text-sm text-gray-500">Source Type</dt>
-                    <dd class="font-medium" th:text="${library.sourceType()}">GITHUB</dd>
+                <div class="info-card">
+                    <p class="info-card-label">Source Type</p>
+                    <p class="info-card-value" th:text="${library.sourceType()}">GITHUB</p>
                 </div>
-                <div th:if="${library.category()}">
-                    <dt class="text-sm text-gray-500">Category</dt>
-                    <dd class="font-medium" th:text="${library.category()}">backend</dd>
+                <div th:if="${library.category()}" class="info-card">
+                    <p class="info-card-label">Category</p>
+                    <p class="info-card-value" th:text="${library.category()}">backend</p>
                 </div>
-                <div th:if="${library.sourceUrl()}">
-                    <dt class="text-sm text-gray-500">Source URL</dt>
-                    <dd>
-                        <a th:href="${library.sourceUrl()}"
-                           th:text="${library.sourceUrl()}"
-                           class="text-indigo-600 hover:text-indigo-800 text-sm truncate block"
-                           target="_blank">URL</a>
-                    </dd>
+                <div th:if="${library.sourceUrl()}" class="info-card" style="grid-column: span 2;">
+                    <p class="info-card-label">Source URL</p>
+                    <a th:href="${library.sourceUrl()}"
+                       th:text="${library.sourceUrl()}"
+                       class="text-accent text-sm truncate block mt-1"
+                       target="_blank">URL</a>
                 </div>
             </div>
 
+            <!-- 標籤 -->
             <div th:if="${library.tags() != null && !library.tags().isEmpty()}" class="mt-4">
-                <dt class="text-sm text-gray-500 mb-2">Tags</dt>
-                <div class="flex flex-wrap gap-2">
+                <p class="text-xs font-semibold text-secondary uppercase tracking-wide mb-2">Tags</p>
+                <div class="tags">
                     <span th:each="tag : ${library.tags()}"
-                          class="px-2 py-1 text-sm bg-gray-100 text-gray-700 rounded"
+                          class="tag"
                           th:text="${tag}">tag</span>
                 </div>
             </div>
         </div>
 
-        <!-- Versions -->
-        <div class="card">
+        <!-- 版本列表 -->
+        <div class="glass-card-static">
             <div class="flex items-center justify-between mb-4">
-                <h2 class="text-lg font-semibold text-gray-900">Versions</h2>
+                <h2 class="text-lg font-semibold text-primary">Versions</h2>
                 <button type="button"
                         class="btn btn-primary"
                         @click="openModal()"
                         th:data-library-id="${library.id()}">
-                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                               d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                     </svg>
@@ -81,15 +80,17 @@
                 </button>
             </div>
 
+            <!-- 空狀態 -->
             <div th:if="${#lists.isEmpty(versions)}" class="empty-state">
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                           d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A2 2 0 013 12V7a4 4 0 014-4z"/>
                 </svg>
-                <p>No versions yet</p>
+                <p class="font-medium">No versions yet</p>
                 <p class="text-sm mt-2">Click "Sync Version" to add a new version</p>
             </div>
 
+            <!-- 版本表格 -->
             <table th:if="${!#lists.isEmpty(versions)}" class="table">
                 <thead>
                     <tr>
@@ -103,7 +104,7 @@
                 <tbody>
                     <tr th:each="version, iterStat : ${versions}">
                         <td>
-                            <span th:text="${version.version()}" class="font-mono">1.0.0</span>
+                            <span th:text="${version.version()}" class="font-mono font-medium">1.0.0</span>
                             <span th:if="${version.isLatest()}" class="ml-2 badge badge-success">Latest</span>
                             <span th:if="${version.isLts()}" class="ml-2 badge badge-info">LTS</span>
                         </td>
@@ -114,27 +115,27 @@
                                 <span th:case="'EOL'" class="badge badge-danger">EOL</span>
                             </span>
                         </td>
-                        <td class="text-sm text-gray-500" th:text="${version.docsPath()} ?: '-'">docs/</td>
+                        <td class="text-sm text-secondary font-mono" th:text="${version.docsPath()} ?: '-'">docs/</td>
                         <td>
                             <span th:if="${syncStatuses[__${iterStat.index}__] != null}">
                                 <span th:switch="${syncStatuses[__${iterStat.index}__].status().name()}">
-                                    <span th:case="'SUCCESS'" class="text-green-600">Success</span>
-                                    <span th:case="'RUNNING'" class="text-blue-600">Running</span>
-                                    <span th:case="'FAILED'" class="text-red-600">Failed</span>
-                                    <span th:case="'PENDING'" class="text-yellow-600">Pending</span>
+                                    <span th:case="'SUCCESS'" class="text-success">Success</span>
+                                    <span th:case="'RUNNING'" class="text-accent">Running</span>
+                                    <span th:case="'FAILED'" class="text-error">Failed</span>
+                                    <span th:case="'PENDING'" class="text-warning">Pending</span>
                                 </span>
-                                <span class="text-xs text-gray-400 ml-2"
+                                <span class="text-xs text-tertiary ml-2"
                                       th:text="${#temporals.format(syncStatuses[__${iterStat.index}__].startedAt(), 'MM-dd HH:mm')}">-</span>
                             </span>
-                            <span th:if="${syncStatuses[__${iterStat.index}__] == null}" class="text-gray-400">Never</span>
+                            <span th:if="${syncStatuses[__${iterStat.index}__] == null}" class="text-tertiary">Never</span>
                         </td>
                         <td class="space-x-2">
                             <a th:href="@{/documents(versionId=${version.id()})}"
-                               class="text-sm text-indigo-600 hover:text-indigo-800">
+                               class="text-sm text-accent">
                                 Browse Docs
                             </a>
                             <button type="button"
-                                    class="text-sm text-indigo-600 hover:text-indigo-800"
+                                    class="text-sm text-accent"
                                     th:data-sync-library="${library.id()}"
                                     th:data-version="${version.version()}">
                                 Sync
@@ -145,7 +146,7 @@
             </table>
         </div>
 
-        <!-- Sync Modal - 使用 teleport 移到 body 以避免定位問題 -->
+        <!-- Sync Modal - 使用 teleport 移到 body -->
         <template x-teleport="body">
             <div x-show="open"
                  x-transition:enter="transition ease-out duration-300"
@@ -156,14 +157,11 @@
                  x-transition:leave-end="opacity-0"
                  class="fixed overflow-y-auto"
                  style="top: 0; left: 0; right: 0; bottom: 0; z-index: 9999;">
-                <!-- Backdrop -->
-                <div class="fixed bg-black bg-opacity-50"
-                     style="top: 0; left: 0; right: 0; bottom: 0;"
-                     @click="closeModal()"></div>
+                <!-- 背景遮罩 -->
+                <div class="modal-backdrop" @click="closeModal()"></div>
 
-                <!-- Modal -->
-                <div class="fixed flex items-center justify-center p-4"
-                     style="top: 0; left: 0; right: 0; bottom: 0;">
+                <!-- Modal 內容 -->
+                <div class="modal">
                     <div x-show="open"
                          x-transition:enter="transition ease-out duration-300"
                          x-transition:enter-start="opacity-0 scale-95"
@@ -172,115 +170,106 @@
                          x-transition:leave-start="opacity-100 scale-100"
                          x-transition:leave-end="opacity-0 scale-95"
                          @click.stop
-                         class="relative bg-white rounded-lg shadow-xl max-w-2xl w-full flex flex-col"
-                         style="max-height: 80vh;">
+                         class="modal-content"
+                         style="max-width: 640px;">
 
-                    <!-- Header -->
-                    <div class="px-6 py-4 border-b border-gray-200">
-                        <h3 class="text-lg font-semibold text-gray-900">從 GitHub 同步版本</h3>
-                        <p class="text-sm text-gray-500 mt-1">選擇要同步的版本，系統將建立版本並下載文件</p>
-                    </div>
-
-                    <!-- Loading State -->
-                    <div x-show="loading" class="flex-1 flex items-center justify-center py-12">
-                        <div class="text-center">
-                            <div class="spinner mx-auto mb-4"></div>
-                            <p class="text-gray-500">載入 GitHub Releases...</p>
+                        <!-- Header -->
+                        <div class="modal-header">
+                            <h3>從 GitHub 同步版本</h3>
+                            <p>選擇要同步的版本，系統將建立版本並下載文件</p>
                         </div>
-                    </div>
 
-                    <!-- Error State -->
-                    <div x-show="error && !loading" class="flex-1 flex items-center justify-center py-12">
-                        <div class="text-center">
-                            <svg class="w-12 h-12 text-red-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-                            </svg>
-                            <p class="text-red-600" x-text="error"></p>
-                            <button @click="openModal()" class="mt-4 text-sm text-indigo-600 hover:text-indigo-800">
-                                重試
-                            </button>
+                        <!-- Loading State -->
+                        <div x-show="loading" class="flex-1 flex items-center justify-center py-12">
+                            <div class="text-center">
+                                <div class="spinner mx-auto mb-4" style="width: 32px; height: 32px;"></div>
+                                <p class="text-secondary">載入 GitHub Releases...</p>
+                            </div>
                         </div>
-                    </div>
 
-                    <!-- Content -->
-                    <div x-show="!loading && !error" class="flex-1 min-h-0 overflow-hidden flex flex-col">
-                        <!-- Docs Path Notice -->
-                        <div class="px-6 py-3 border-b border-gray-200 flex-shrink-0" style="background-color: #eff6ff;">
-                            <p class="text-sm" style="color: #1d4ed8;">
-                                <svg style="width: 16px; height: 16px; display: inline-block; vertical-align: middle; margin-right: 4px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <!-- Error State -->
+                        <div x-show="error && !loading" class="flex-1 flex items-center justify-center py-12">
+                            <div class="text-center">
+                                <svg class="w-12 h-12 text-error mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                                </svg>
+                                <p class="text-error" x-text="error"></p>
+                                <button @click="openModal()" class="mt-4 text-sm text-accent">
+                                    重試
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Content -->
+                        <div x-show="!loading && !error" class="flex-1 min-h-0 overflow-hidden flex flex-col">
+                            <!-- 提示訊息 -->
+                            <div class="px-6 py-3 border-b info-box" style="border-radius: 0;">
+                                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                           d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                 </svg>
-                                文件路徑依版本自動計算，不同版本可能有不同的路徑
-                            </p>
-                        </div>
+                                <p>文件路徑依版本自動計算，不同版本可能有不同的路徑</p>
+                            </div>
 
-                        <!-- Select All & Count -->
-                        <div class="px-6 py-3 border-b border-gray-200 flex items-center justify-between bg-gray-50 flex-shrink-0">
-                            <label class="flex items-center">
-                                <input type="checkbox"
-                                       :checked="allSelectableSelected"
-                                       @change="toggleSelectAll()"
-                                       class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500">
-                                <span class="ml-2 text-sm text-gray-700">全選</span>
-                            </label>
-                            <span class="text-sm text-gray-500">
-                                已選擇 <span x-text="selectedCount" class="font-medium text-indigo-600"></span> 個
-                            </span>
-                        </div>
+                            <!-- 全選控制列 -->
+                            <div class="px-6 py-3 border-b flex items-center justify-between bg-gray-50">
+                                <label class="flex items-center">
+                                    <input type="checkbox"
+                                           :checked="allSelectableSelected"
+                                           @change="toggleSelectAll()"
+                                           class="h-4 w-4 rounded">
+                                    <span class="ml-2 text-sm">全選</span>
+                                </label>
+                                <span class="text-sm text-secondary">
+                                    已選擇 <span x-text="selectedCount" class="font-medium text-accent"></span> 個
+                                </span>
+                            </div>
 
-                        <!-- Releases List - 固定最大高度以確保可滾動 -->
-                        <div class="overflow-y-auto" style="max-height: 300px;">
-                            <template x-for="release in releases" :key="release.tagName">
-                                <div class="px-6 py-3 border-b border-gray-100 hover:bg-gray-50"
-                                     :class="{ 'bg-gray-50 opacity-60': release.exists }">
-                                    <div class="flex items-center">
+                            <!-- Releases 列表 -->
+                            <div class="overflow-y-auto" style="max-height: 300px;">
+                                <template x-for="release in releases" :key="release.tagName">
+                                    <div class="release-item"
+                                         :class="{ 'disabled': release.exists }">
                                         <input type="checkbox"
                                                x-model="release.selected"
-                                               :disabled="release.exists"
-                                               class="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 disabled:opacity-50">
-                                        <div class="ml-3 flex-1">
-                                            <div class="flex items-center">
-                                                <span class="font-mono text-sm font-medium" x-text="release.version"></span>
-                                                <span x-show="release.exists"
-                                                      class="ml-2 px-2 py-0.5 text-xs bg-gray-200 text-gray-600 rounded">已存在</span>
+                                               :disabled="release.exists">
+                                        <div class="release-item-content">
+                                            <div class="flex items-center gap-2">
+                                                <span class="release-version" x-text="release.version"></span>
+                                                <span x-show="release.exists" class="badge badge-secondary">已存在</span>
                                             </div>
-                                            <p class="text-sm text-gray-500">
-                                                <span class="text-gray-400">Release: </span>
+                                            <p class="release-name">
+                                                <span class="text-tertiary">Release: </span>
                                                 <span x-text="release.name"></span>
                                             </p>
+                                            <p class="release-path" x-text="'📁 ' + release.docsPath"></p>
                                         </div>
-                                        <span class="text-xs text-gray-400" x-text="formatDate(release.publishedAt)"></span>
+                                        <span class="release-date" x-text="formatDate(release.publishedAt)"></span>
                                     </div>
-                                    <!-- 顯示該版本的文件路徑 -->
-                                    <div class="ml-7 mt-1">
-                                        <span class="text-xs text-gray-400 font-mono" x-text="'📁 ' + release.docsPath"></span>
-                                    </div>
-                                </div>
-                            </template>
+                                </template>
+                            </div>
+                        </div>
+
+                        <!-- Footer -->
+                        <div class="modal-footer">
+                            <button @click="closeModal()"
+                                    class="btn btn-secondary"
+                                    :disabled="syncing">
+                                取消
+                            </button>
+                            <button @click="startSync()"
+                                    class="btn btn-primary"
+                                    :disabled="selectedCount === 0 || syncing">
+                                <span x-show="!syncing">同步選中版本</span>
+                                <span x-show="syncing" class="flex items-center">
+                                    <span class="spinner mr-2"></span>
+                                    同步中...
+                                </span>
+                            </button>
                         </div>
                     </div>
-
-                    <!-- Footer -->
-                    <div class="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
-                        <button @click="closeModal()"
-                                class="btn btn-secondary"
-                                :disabled="syncing">
-                            取消
-                        </button>
-                        <button @click="startSync()"
-                                class="btn btn-primary"
-                                :disabled="selectedCount === 0 || syncing">
-                            <span x-show="!syncing">同步選中版本</span>
-                            <span x-show="syncing" class="flex items-center">
-                                <span class="spinner mr-2"></span>
-                                同步中...
-                            </span>
-                        </button>
-                    </div>
                 </div>
-            </div>
             </div>
         </template>
     </div>

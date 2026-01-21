@@ -6,15 +6,16 @@
 </head>
 <body>
     <div th:fragment="main-content">
-        <!-- Search Header -->
+        <!-- 頁首 -->
         <div class="mb-8">
-            <h2 class="text-2xl font-bold text-gray-900 mb-2">Search Documentation</h2>
-            <p class="text-gray-600">Test full-text and semantic search across your indexed documentation</p>
+            <h2 class="text-2xl font-bold text-primary mb-2">Search Documentation</h2>
+            <p class="text-secondary">Test full-text and semantic search across your indexed documentation</p>
         </div>
 
-        <!-- Search Form -->
-        <div class="card mb-6">
+        <!-- 搜尋表單 -->
+        <div class="glass-card-static mb-6">
             <form id="search-form" class="space-y-4">
+                <!-- 搜尋框 -->
                 <div class="search-box">
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -28,9 +29,10 @@
                            autocomplete="off">
                 </div>
 
+                <!-- 搜尋選項 -->
                 <div class="flex flex-wrap gap-4">
                     <!-- Search Mode -->
-                    <div class="flex-1 min-w-[200px]">
+                    <div class="flex-1" style="min-width: 200px;">
                         <label for="search-mode" class="form-label">Search Mode</label>
                         <select id="search-mode" name="mode" class="form-input">
                             <option value="hybrid" selected>Hybrid (Recommended)</option>
@@ -40,7 +42,7 @@
                     </div>
 
                     <!-- Library Filter -->
-                    <div class="flex-1 min-w-[200px]">
+                    <div class="flex-1" style="min-width: 200px;">
                         <label for="library-filter" class="form-label">Library</label>
                         <select id="library-filter" name="libraryId" class="form-input">
                             <option value="">All Libraries</option>
@@ -52,7 +54,7 @@
                 </div>
 
                 <button type="submit" class="btn btn-primary">
-                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                               d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                     </svg>
@@ -61,25 +63,25 @@
             </form>
         </div>
 
-        <!-- Search Results -->
-        <div class="card">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">Results</h3>
+        <!-- 搜尋結果 -->
+        <div class="glass-card-static">
+            <h3 class="text-lg font-semibold text-primary mb-4">Results</h3>
             <div id="search-results">
                 <div class="empty-state">
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                               d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                     </svg>
-                    <p>Enter a search query to get started</p>
+                    <p class="font-medium">Enter a search query to get started</p>
                     <p class="text-sm mt-2">Try searching for concepts, APIs, or error messages</p>
                 </div>
             </div>
         </div>
 
-        <!-- Search Tips -->
-        <div class="mt-6 card bg-blue-50 border border-blue-200">
-            <h4 class="font-medium text-blue-900 mb-2">Search Tips</h4>
-            <ul class="text-sm text-blue-800 space-y-1">
+        <!-- 搜尋提示 -->
+        <div class="mt-6 tips-box">
+            <h4>Search Tips</h4>
+            <ul>
                 <li><strong>Full-text:</strong> Best for exact keyword matches and code examples</li>
                 <li><strong>Semantic:</strong> Best for concept-based queries and natural language questions</li>
                 <li><strong>Hybrid:</strong> Combines both methods for comprehensive results</li>
