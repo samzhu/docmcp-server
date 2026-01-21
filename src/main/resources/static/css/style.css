@@ -1354,6 +1354,30 @@ select.form-input {
     line-height: 1.5;
 }
 
+/* ===== 標籤按鈕 - Setup 頁面使用 ===== */
+
+.tab-btn {
+    padding: 8px 16px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--color-text-secondary);
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.tab-btn:hover {
+    color: var(--color-text-primary);
+    background: rgba(0, 0, 0, 0.04);
+}
+
+.tab-btn.active {
+    color: var(--color-accent);
+    background: var(--color-accent-light);
+}
+
 /* ===== 快速操作卡片 - 實心白色背景 ===== */
 
 .action-card {

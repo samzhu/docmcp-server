@@ -1,6 +1,6 @@
 # Documentation MCP Server 技術文件索引
 
-> 最後更新：2026-01-19
+> 最後更新：2026-01-21
 
 ## 概述
 
@@ -24,6 +24,9 @@
 | 文件 | 說明 |
 |------|------|
 | [PRD - 產品需求文件](PRD.md) | DocMCP Server 的完整產品需求規格，包含技術架構、功能需求、開發計畫 |
+| [MCP 整合教學指南](MCP-Integration-Guide.md) | 將 DocMCP Server 連接到 Claude Code、VS Code、Cursor 等 AI 編程助手 |
+| [使用者手冊](User-Guide.md) | 一般使用者操作指南，包含新增文件庫、同步版本等教學 |
+| [設計系統文件](DESIGN_SYSTEM.md) | Apple Liquid Glass 風格的 UI 設計規範 |
 
 ### MCP (Model Context Protocol)
 
@@ -110,6 +113,7 @@
 
 | 日期 | 更新內容 |
 |------|----------|
+| 2026-01-21 | 新增 MCP 整合教學指南（Claude Code、VS Code、Cursor） |
 | 2026-01-19 | PRD 1.3.0：新增繁體中文詳細註解說明 |
 | 2026-01-19 | PRD 1.2.0：改用 Gemini text-embedding-004，非 starter 手動配置 |
 | 2026-01-19 | PRD 1.1.0：整合 spring-documentation-mcp-server 優秀設計 |
