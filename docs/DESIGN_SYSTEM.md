@@ -213,8 +213,13 @@ box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08),
 .p-2  → padding: 0.5rem (8px)
 .p-4  → padding: 1rem (16px)
 .p-6  → padding: 1.5rem (24px)
-.px-4 → padding-left/right: 1rem
-.py-2 → padding-top/bottom: 0.5rem
+.px-4 → padding-left/right: 1rem (16px)
+.px-6 → padding-left/right: 1.5rem (24px)  /* Modal 內容區水平內距 */
+.py-2 → padding-top/bottom: 0.5rem (8px)
+.py-3 → padding-top/bottom: 0.75rem (12px) /* Modal 控制列 */
+.py-4 → padding-top/bottom: 1rem (16px)
+.py-8 → padding-top/bottom: 2rem (32px)
+.py-12 → padding-top/bottom: 3rem (48px)   /* Modal 載入/錯誤狀態區塊 */
 
 /* Margin - Top */
 .mt-1 → margin-top: 0.25rem (4px)
@@ -234,6 +239,7 @@ box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08),
 .ml-2 → margin-left: 0.5rem
 .ml-4 → margin-left: 1rem
 .mr-2 → margin-right: 0.5rem
+.mx-auto → margin-left/right: auto  /* 水平置中 */
 
 /* Gap (Flexbox/Grid) */
 .gap-1 → gap: 0.25rem (4px)
@@ -256,16 +262,27 @@ box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08),
 .w-4     → width: 1rem (16px)
 .w-5     → width: 1.25rem (20px)   /* icon 標準尺寸 */
 .w-6     → width: 1.5rem (24px)
+.w-8     → width: 2rem (32px)
+.w-10    → width: 2.5rem (40px)
+.w-12    → width: 3rem (48px)      /* Modal 內大型 icon */
+.w-16    → width: 4rem (64px)
 .w-full  → width: 100%
 
 /* 高度 */
 .h-4     → height: 1rem (16px)
 .h-5     → height: 1.25rem (20px)  /* icon 標準尺寸 */
 .h-6     → height: 1.5rem (24px)
+.h-8     → height: 2rem (32px)
+.h-10    → height: 2.5rem (40px)
+.h-12    → height: 3rem (48px)     /* Modal 內大型 icon */
+.h-16    → height: 4rem (64px)
 
 /* 最大寬度 */
 .max-w-xs  → max-width: 20rem (320px)
 .max-w-2xl → max-width: 42rem (672px)  /* 表單卡片最大寬度 */
+
+/* 最小高度 */
+.min-h-0   → min-height: 0         /* Flexbox 子元素捲動必備 */
 ```
 
 ---
@@ -530,6 +547,51 @@ box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08),
 </div>
 ```
 
+**Modal 內狀態區塊範例：**
+
+```html
+<!-- 載入狀態 -->
+<div class="flex-1 flex items-center justify-center py-12">
+    <div class="text-center">
+        <div class="spinner mx-auto mb-4" style="width: 32px; height: 32px;"></div>
+        <p class="text-secondary">載入中...</p>
+    </div>
+</div>
+
+<!-- 錯誤狀態 - 注意 SVG 必須使用 w-12 h-12 限制尺寸 -->
+<div class="flex-1 flex items-center justify-center py-12">
+    <div class="text-center">
+        <svg class="w-12 h-12 text-error mx-auto mb-4" ...>...</svg>
+        <p class="text-error">錯誤訊息</p>
+    </div>
+</div>
+```
+
+> ⚠️ **重要**：Modal 內的 SVG 圖示必須使用 `w-*` 和 `h-*` 類別限制尺寸，否則 SVG 會擴展到填滿整個容器。
+
+---
+
+### 資訊提示框 Info Box
+
+用於 Modal 或頁面內顯示提示訊息。
+
+```html
+<div class="info-box">
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+    </svg>
+    <p>提示訊息文字內容</p>
+</div>
+```
+
+**樣式規格：**
+- 背景：`rgba(0, 122, 255, 0.12)` (--color-accent-light)
+- 圓角：`12px` (--radius-sm)
+- 內距：`8px 16px`
+- 文字：`13px`，次要文字色
+- Icon：`16px`，強調色
+
 ---
 
 ### 功能卡片 Feature Card
@@ -696,6 +758,8 @@ box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08),
 |------|-----|----------|
 | `.w-5` / `.h-5` | 20px | 標準 icon 尺寸 |
 | `.w-6` / `.h-6` | 24px | 大 icon 尺寸 |
+| `.w-8` / `.h-8` | 32px | 中型 icon（載入動畫） |
+| `.w-12` / `.h-12` | 48px | 大型 icon（Modal 錯誤/空狀態） |
 | `.max-w-2xl` | 672px | 表單卡片最大寬度 |
 
 ### 佈局類別
@@ -703,10 +767,15 @@ box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08),
 | 類別 | 說明 |
 |------|------|
 | `.flex` | display: flex |
+| `.flex-1` | flex: 1 |
 | `.flex-col` | flex-direction: column |
 | `.items-center` | align-items: center |
 | `.justify-between` | justify-content: space-between |
 | `.justify-end` | justify-content: flex-end |
+| `.overflow-hidden` | overflow: hidden |
+| `.overflow-x-auto` | overflow-x: auto |
+| `.overflow-y-auto` | overflow-y: auto（Modal 列表捲動） |
+| `.min-h-0` | min-height: 0（Flexbox 子元素捲動必備） |
 
 ### 使用範例
 
