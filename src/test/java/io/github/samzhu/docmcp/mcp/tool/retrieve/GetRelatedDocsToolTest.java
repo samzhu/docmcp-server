@@ -1,5 +1,6 @@
 package io.github.samzhu.docmcp.mcp.tool.retrieve;
 
+import com.github.f4b6a3.tsid.TsidCreator;
 import io.github.samzhu.docmcp.domain.exception.LibraryNotFoundException;
 import io.github.samzhu.docmcp.domain.model.Document;
 import io.github.samzhu.docmcp.domain.model.DocumentChunk;
@@ -14,7 +15,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -42,14 +42,21 @@ class GetRelatedDocsToolTest {
         getRelatedDocsTool = new GetRelatedDocsTool(documentRepository, chunkRepository);
     }
 
+    /**
+     * 產生隨機 ID
+     */
+    private String randomId() {
+        return TsidCreator.getTsid().toString();
+    }
+
     @Test
     @DisplayName("應回傳相關文件列表")
     void shouldReturnRelatedDocuments() {
         // Arrange
-        var sourceDocId = UUID.randomUUID();
-        var relatedDocId1 = UUID.randomUUID();
-        var relatedDocId2 = UUID.randomUUID();
-        var versionId = UUID.randomUUID();
+        var sourceDocId = randomId();
+        var relatedDocId1 = randomId();
+        var relatedDocId2 = randomId();
+        var versionId = randomId();
 
         var sourceDoc = createDocument(sourceDocId, versionId, "Spring MVC Introduction", "docs/spring-mvc.md");
         var sourceChunk = createChunk(sourceDocId, "Introduction to Spring MVC...", new float[]{0.1f, 0.2f});
@@ -68,10 +75,10 @@ class GetRelatedDocsToolTest {
         when(documentRepository.findById(relatedDocId2)).thenReturn(Optional.of(relatedDoc2));
 
         // Act
-        var result = getRelatedDocsTool.getRelatedDocs(sourceDocId.toString(), null);
+        var result = getRelatedDocsTool.getRelatedDocs(sourceDocId, null);
 
         // Assert
-        assertThat(result.sourceDocumentId()).isEqualTo(sourceDocId.toString());
+        assertThat(result.sourceDocumentId()).isEqualTo(sourceDocId);
         assertThat(result.sourceTitle()).isEqualTo("Spring MVC Introduction");
         assertThat(result.sourcePath()).isEqualTo("docs/spring-mvc.md");
         assertThat(result.relatedDocs()).hasSize(2);
@@ -81,9 +88,9 @@ class GetRelatedDocsToolTest {
     @DisplayName("應支援限制回傳數量")
     void shouldSupportLimitParameter() {
         // Arrange
-        var sourceDocId = UUID.randomUUID();
-        var relatedDocId = UUID.randomUUID();
-        var versionId = UUID.randomUUID();
+        var sourceDocId = randomId();
+        var relatedDocId = randomId();
+        var versionId = randomId();
 
         var sourceDoc = createDocument(sourceDocId, versionId, "Source Doc", "docs/source.md");
         var sourceChunk = createChunk(sourceDocId, "Source content...", new float[]{0.1f, 0.2f});
@@ -98,7 +105,7 @@ class GetRelatedDocsToolTest {
         when(documentRepository.findById(relatedDocId)).thenReturn(Optional.of(relatedDoc));
 
         // Act
-        var result = getRelatedDocsTool.getRelatedDocs(sourceDocId.toString(), 3);
+        var result = getRelatedDocsTool.getRelatedDocs(sourceDocId, 3);
 
         // Assert
         assertThat(result.relatedDocs()).hasSize(1);
@@ -108,15 +115,15 @@ class GetRelatedDocsToolTest {
     @DisplayName("當來源文件沒有 embedding 時應回傳空列表")
     void shouldReturnEmptyWhenNoEmbedding() {
         // Arrange
-        var sourceDocId = UUID.randomUUID();
-        var versionId = UUID.randomUUID();
+        var sourceDocId = randomId();
+        var versionId = randomId();
         var sourceDoc = createDocument(sourceDocId, versionId, "Source Doc", "docs/source.md");
 
         when(documentRepository.findById(sourceDocId)).thenReturn(Optional.of(sourceDoc));
         when(chunkRepository.findFirstByDocumentId(sourceDocId)).thenReturn(null);
 
         // Act
-        var result = getRelatedDocsTool.getRelatedDocs(sourceDocId.toString(), null);
+        var result = getRelatedDocsTool.getRelatedDocs(sourceDocId, null);
 
         // Assert
         assertThat(result.relatedDocs()).isEmpty();
@@ -126,8 +133,8 @@ class GetRelatedDocsToolTest {
     @DisplayName("當找不到相關文件時應回傳空列表")
     void shouldReturnEmptyWhenNoRelatedDocs() {
         // Arrange
-        var sourceDocId = UUID.randomUUID();
-        var versionId = UUID.randomUUID();
+        var sourceDocId = randomId();
+        var versionId = randomId();
 
         var sourceDoc = createDocument(sourceDocId, versionId, "Unique Doc", "docs/unique.md");
         var sourceChunk = createChunk(sourceDocId, "Very unique content...", new float[]{0.1f, 0.2f});
@@ -138,7 +145,7 @@ class GetRelatedDocsToolTest {
                 .thenReturn(List.of());
 
         // Act
-        var result = getRelatedDocsTool.getRelatedDocs(sourceDocId.toString(), null);
+        var result = getRelatedDocsTool.getRelatedDocs(sourceDocId, null);
 
         // Assert
         assertThat(result.relatedDocs()).isEmpty();
@@ -148,11 +155,11 @@ class GetRelatedDocsToolTest {
     @DisplayName("當文件不存在時應拋出例外")
     void shouldThrowExceptionWhenDocumentNotFound() {
         // Arrange
-        var docId = UUID.randomUUID();
+        var docId = randomId();
         when(documentRepository.findById(docId)).thenReturn(Optional.empty());
 
         // Act & Assert
-        assertThatThrownBy(() -> getRelatedDocsTool.getRelatedDocs(docId.toString(), null))
+        assertThatThrownBy(() -> getRelatedDocsTool.getRelatedDocs(docId, null))
                 .isInstanceOf(LibraryNotFoundException.class)
                 .hasMessageContaining("文件不存在");
     }
@@ -160,14 +167,14 @@ class GetRelatedDocsToolTest {
     /**
      * 建立測試用的 Document
      */
-    private Document createDocument(UUID id, UUID versionId, String title, String path) {
-        return new Document(id, versionId, title, path, "content", null, "markdown", null, null, null);
+    private Document createDocument(String id, String versionId, String title, String path) {
+        return new Document(id, versionId, title, path, "content", null, "markdown", null, null, null, null);
     }
 
     /**
      * 建立測試用的 DocumentChunk
      */
-    private DocumentChunk createChunk(UUID documentId, String content, float[] embedding) {
-        return new DocumentChunk(UUID.randomUUID(), documentId, 0, content, embedding, 100, null, null);
+    private DocumentChunk createChunk(String documentId, String content, float[] embedding) {
+        return new DocumentChunk(randomId(), documentId, 0, content, embedding, 100, null, null, null, null);
     }
 }

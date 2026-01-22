@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.time.OffsetDateTime;
-import java.util.UUID;
 
 /**
  * API Key 管理頁面控制器
@@ -101,7 +100,7 @@ public class ApiKeyWebController {
      * @return 重導向到列表頁面
      */
     @PostMapping("/{id}/revoke")
-    public String revoke(@PathVariable UUID id, RedirectAttributes redirectAttributes) {
+    public String revoke(@PathVariable String id, RedirectAttributes redirectAttributes) {
         try {
             apiKeyService.revokeKey(id);
             redirectAttributes.addFlashAttribute("successMessage", "API Key revoked successfully");

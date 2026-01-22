@@ -3,7 +3,6 @@ package io.github.samzhu.docmcp.web.dto;
 import io.github.samzhu.docmcp.mcp.dto.SearchResultItem;
 
 import java.util.List;
-import java.util.UUID;
 
 /**
  * 搜尋結果資料傳輸物件
@@ -36,8 +35,8 @@ public record SearchResultDto(
      * 搜尋結果項目 DTO
      */
     public record SearchResultItemDto(
-            UUID documentId,
-            UUID chunkId,
+            String documentId,
+            String chunkId,
             String title,
             String path,
             String content,

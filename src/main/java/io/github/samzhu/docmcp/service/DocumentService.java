@@ -13,7 +13,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 /**
  * 文件服務
@@ -43,11 +42,11 @@ public class DocumentService {
     /**
      * 取得文件完整內容
      *
-     * @param documentId 文件 ID
+     * @param documentId 文件 ID（TSID 格式）
      * @return 文件內容，包含文件資訊和區塊
      * @throws DocumentNotFoundException 若文件不存在
      */
-    public DocumentContent getDocumentContent(UUID documentId) {
+    public DocumentContent getDocumentContent(String documentId) {
         Document document = documentRepository.findById(documentId)
                 .orElseThrow(() -> DocumentNotFoundException.byId(documentId));
 
@@ -60,40 +59,40 @@ public class DocumentService {
     /**
      * 依路徑取得文件
      *
-     * @param versionId 版本 ID
+     * @param versionId 版本 ID（TSID 格式）
      * @param path      文件路徑
      * @return 文件（若存在）
      */
-    public Optional<Document> getDocumentByPath(UUID versionId, String path) {
+    public Optional<Document> getDocumentByPath(String versionId, String path) {
         return documentRepository.findByVersionIdAndPath(versionId, path);
     }
 
     /**
      * 取得文件（僅文件本身，不含區塊和程式碼範例）
      *
-     * @param documentId 文件 ID
+     * @param documentId 文件 ID（TSID 格式）
      * @return 文件（若存在）
      */
-    public Optional<Document> getDocument(UUID documentId) {
+    public Optional<Document> getDocument(String documentId) {
         return documentRepository.findById(documentId);
     }
 
     /**
      * 取得程式碼範例
      *
-     * @param libraryId 函式庫 ID
+     * @param libraryId 函式庫 ID（TSID 格式）
      * @param version   版本（可選）
      * @param language  程式語言篩選（可選）
      * @param limit     結果數量上限
      * @return 程式碼範例列表
      */
-    public List<CodeExample> getCodeExamples(UUID libraryId, String version,
+    public List<CodeExample> getCodeExamples(String libraryId, String version,
                                               String language, int limit) {
         // 如果沒有指定版本，使用最新版本
         String resolvedVersion = version;
         if (version == null || version.isBlank()) {
             resolvedVersion = versionRepository.findLatestByLibraryId(libraryId)
-                    .map(v -> v.version())
+                    .map(v -> v.getVersion())
                     .orElse(null);
         }
 
@@ -103,11 +102,11 @@ public class DocumentService {
     /**
      * 取得指定函式庫中所有可用的程式語言
      *
-     * @param libraryId 函式庫 ID
+     * @param libraryId 函式庫 ID（TSID 格式）
      * @param version   版本（可選）
      * @return 程式語言列表
      */
-    public List<String> getAvailableLanguages(UUID libraryId, String version) {
+    public List<String> getAvailableLanguages(String libraryId, String version) {
         return codeExampleRepository.findDistinctLanguagesByLibrary(libraryId, version);
     }
 

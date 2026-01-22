@@ -5,7 +5,6 @@ import io.github.samzhu.docmcp.domain.model.SyncHistory;
 
 import java.time.OffsetDateTime;
 import java.util.Map;
-import java.util.UUID;
 
 /**
  * 同步歷史資料傳輸物件
@@ -13,8 +12,8 @@ import java.util.UUID;
  * 用於 Web API 回傳同步歷史資訊。
  * </p>
  *
- * @param id                 同步 ID
- * @param versionId          版本 ID
+ * @param id                 同步 ID（TSID 格式）
+ * @param versionId          版本 ID（TSID 格式）
  * @param status             同步狀態
  * @param startedAt          開始時間
  * @param completedAt        完成時間
@@ -24,8 +23,8 @@ import java.util.UUID;
  * @param metadata           額外的元資料
  */
 public record SyncHistoryDto(
-        UUID id,
-        UUID versionId,
+        String id,
+        String versionId,
         SyncStatus status,
         OffsetDateTime startedAt,
         OffsetDateTime completedAt,
@@ -39,15 +38,15 @@ public record SyncHistoryDto(
      */
     public static SyncHistoryDto from(SyncHistory history) {
         return new SyncHistoryDto(
-                history.id(),
-                history.versionId(),
-                history.status(),
-                history.startedAt(),
-                history.completedAt(),
-                history.documentsProcessed(),
-                history.chunksCreated(),
-                history.errorMessage(),
-                history.metadata()
+                history.getId(),
+                history.getVersionId(),
+                history.getStatus(),
+                history.getStartedAt(),
+                history.getCompletedAt(),
+                history.getDocumentsProcessed(),
+                history.getChunksCreated(),
+                history.getErrorMessage(),
+                history.getMetadata()
         );
     }
 }

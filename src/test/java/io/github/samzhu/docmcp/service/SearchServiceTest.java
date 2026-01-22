@@ -12,11 +12,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
 
+import com.github.f4b6a3.tsid.TsidCreator;
+
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 
 import static io.github.samzhu.docmcp.infrastructure.vectorstore.DocumentChunkVectorStore.*;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -38,8 +39,8 @@ class SearchServiceTest {
     private VectorStore vectorStore;
     private SearchService searchService;
 
-    private UUID libraryId;
-    private UUID versionId;
+    private String libraryId;
+    private String versionId;
 
     @BeforeEach
     void setUp() {
@@ -49,8 +50,15 @@ class SearchServiceTest {
 
         searchService = new SearchService(documentRepository, versionRepository, vectorStore);
 
-        libraryId = UUID.randomUUID();
-        versionId = UUID.randomUUID();
+        libraryId = randomId();
+        versionId = randomId();
+    }
+
+    /**
+     * 生成隨機 TSID
+     */
+    private String randomId() {
+        return TsidCreator.getTsid().toString();
     }
 
     @Nested
@@ -63,7 +71,7 @@ class SearchServiceTest {
             // Arrange
             String query = "spring boot";
             var version = createLibraryVersion(versionId, libraryId, "1.0.0", true);
-            var document = createDocument(UUID.randomUUID(), versionId, "Getting Started",
+            var document = createDocument(randomId(), versionId, "Getting Started",
                     "/docs/getting-started.md", "Spring Boot makes it easy to create...");
 
             when(versionRepository.findLatestByLibraryId(libraryId))
@@ -121,7 +129,7 @@ class SearchServiceTest {
             String query = "configuration";
             String versionStr = "2.0.0";
             var version = createLibraryVersion(versionId, libraryId, versionStr, false);
-            var document = createDocument(UUID.randomUUID(), versionId, "Configuration",
+            var document = createDocument(randomId(), versionId, "Configuration",
                     "/docs/config.md", "Configuration options...");
 
             when(versionRepository.findByLibraryIdAndVersion(libraryId, versionStr))
@@ -144,7 +152,7 @@ class SearchServiceTest {
             String query = "spring";
             var version = createLibraryVersion(versionId, libraryId, "1.0.0", true);
             String longContent = "A".repeat(600);
-            var document = createDocument(UUID.randomUUID(), versionId, "Long Doc",
+            var document = createDocument(randomId(), versionId, "Long Doc",
                     "/docs/long.md", longContent);
 
             when(versionRepository.findLatestByLibraryId(libraryId))
@@ -170,8 +178,8 @@ class SearchServiceTest {
         void shouldReturnResultsWhenVectorStoreReturnsMatchingDocuments() {
             // Arrange
             String query = "how to configure database";
-            UUID documentId = UUID.randomUUID();
-            UUID chunkId = UUID.randomUUID();
+            String documentId = randomId();
+            String chunkId = randomId();
 
             var version = createLibraryVersion(versionId, libraryId, "1.0.0", true);
             var document = createDocument(documentId, versionId, "Database Config",
@@ -179,11 +187,11 @@ class SearchServiceTest {
 
             // 建立模擬的 Spring AI Document（Spring AI 2.0 使用建構子）
             var aiDoc = new org.springframework.ai.document.Document(
-                    chunkId.toString(),
+                    chunkId,
                     "Database configuration...",
                     Map.of(
-                            METADATA_VERSION_ID, versionId.toString(),
-                            METADATA_DOCUMENT_ID, documentId.toString(),
+                            METADATA_VERSION_ID, versionId,
+                            METADATA_DOCUMENT_ID, documentId,
                             METADATA_CHUNK_INDEX, 0,
                             "score", 0.85
                     )
@@ -260,23 +268,23 @@ class SearchServiceTest {
         }
 
         @Test
-        @DisplayName("should use specific version when provided")
-        void shouldUseSpecificVersionWhenProvided() {
+        @DisplayName("should use specific version when provided - semantic")
+        void shouldUseSpecificVersionWhenProvidedSemantic() {
             // Arrange
             String query = "configuration";
             String versionStr = "2.0.0";
-            UUID documentId = UUID.randomUUID();
+            String documentId = randomId();
 
             var version = createLibraryVersion(versionId, libraryId, versionStr, false);
             var document = createDocument(documentId, versionId, "Configuration",
                     "/docs/config.md", "Configuration options...");
 
             var aiDoc = new org.springframework.ai.document.Document(
-                    UUID.randomUUID().toString(),
+                    randomId(),
                     "Configuration content...",
                     Map.of(
-                            METADATA_VERSION_ID, versionId.toString(),
-                            METADATA_DOCUMENT_ID, documentId.toString(),
+                            METADATA_VERSION_ID, versionId,
+                            METADATA_DOCUMENT_ID, documentId,
                             METADATA_CHUNK_INDEX, 0,
                             "score", 0.9
                     )
@@ -305,9 +313,9 @@ class SearchServiceTest {
 
             // 建立一個缺少 documentId 的 AI Document
             var aiDocMissingMetadata = new org.springframework.ai.document.Document(
-                    UUID.randomUUID().toString(),
+                    randomId(),
                     "Some content...",
-                    Map.of(METADATA_VERSION_ID, versionId.toString())
+                    Map.of(METADATA_VERSION_ID, versionId)
                     // 缺少 METADATA_DOCUMENT_ID
             );
 
@@ -354,7 +362,7 @@ class SearchServiceTest {
             // Arrange
             String query = "spring boot";
             var version = createLibraryVersion(versionId, libraryId, "1.0.0", true);
-            var document = createDocument(UUID.randomUUID(), versionId, "Getting Started",
+            var document = createDocument(randomId(), versionId, "Getting Started",
                     "/docs/getting-started.md", "Spring Boot makes it easy to create...");
 
             when(versionRepository.findLatestByLibraryId(libraryId))
@@ -377,19 +385,19 @@ class SearchServiceTest {
         void shouldReturnSemanticResultsOnlyWhenKeywordSearchReturnsEmpty() {
             // Arrange
             String query = "how to configure database";
-            UUID documentId = UUID.randomUUID();
-            UUID chunkId = UUID.randomUUID();
+            String documentId = randomId();
+            String chunkId = randomId();
 
             var version = createLibraryVersion(versionId, libraryId, "1.0.0", true);
             var document = createDocument(documentId, versionId, "Database Config",
                     "/docs/database.md", "Full content...");
 
             var aiDoc = new org.springframework.ai.document.Document(
-                    chunkId.toString(),
+                    chunkId,
                     "Database configuration...",
                     Map.of(
-                            METADATA_VERSION_ID, versionId.toString(),
-                            METADATA_DOCUMENT_ID, documentId.toString(),
+                            METADATA_VERSION_ID, versionId,
+                            METADATA_DOCUMENT_ID, documentId,
                             METADATA_CHUNK_INDEX, 0,
                             "score", 0.85
                     )
@@ -418,10 +426,10 @@ class SearchServiceTest {
         void shouldFuseResultsFromBothSearchesUsingRRF() {
             // Arrange
             String query = "spring configuration";
-            UUID docId1 = UUID.randomUUID();
-            UUID docId2 = UUID.randomUUID();
-            UUID chunkId1 = UUID.randomUUID();
-            UUID chunkId2 = UUID.randomUUID();
+            String docId1 = randomId();
+            String docId2 = randomId();
+            String chunkId1 = randomId();
+            String chunkId2 = randomId();
 
             var version = createLibraryVersion(versionId, libraryId, "1.0.0", true);
             var document1 = createDocument(docId1, versionId, "Spring Config",
@@ -437,21 +445,21 @@ class SearchServiceTest {
 
             // 語意搜尋結果：doc2 排第一，doc1 排第二
             var aiDoc1 = new org.springframework.ai.document.Document(
-                    chunkId1.toString(),
+                    chunkId1,
                     "Spring configuration...",
                     Map.of(
-                            METADATA_VERSION_ID, versionId.toString(),
-                            METADATA_DOCUMENT_ID, docId1.toString(),
+                            METADATA_VERSION_ID, versionId,
+                            METADATA_DOCUMENT_ID, docId1,
                             METADATA_CHUNK_INDEX, 0,
                             "score", 0.75
                     )
             );
             var aiDoc2 = new org.springframework.ai.document.Document(
-                    chunkId2.toString(),
+                    chunkId2,
                     "Database configuration...",
                     Map.of(
-                            METADATA_VERSION_ID, versionId.toString(),
-                            METADATA_DOCUMENT_ID, docId2.toString(),
+                            METADATA_VERSION_ID, versionId,
+                            METADATA_DOCUMENT_ID, docId2,
                             METADATA_CHUNK_INDEX, 0,
                             "score", 0.85
                     )
@@ -482,11 +490,11 @@ class SearchServiceTest {
 
             // 建立多個文件
             var documents = List.of(
-                    createDocument(UUID.randomUUID(), versionId, "Doc 1", "/docs/1.md", "Content 1"),
-                    createDocument(UUID.randomUUID(), versionId, "Doc 2", "/docs/2.md", "Content 2"),
-                    createDocument(UUID.randomUUID(), versionId, "Doc 3", "/docs/3.md", "Content 3"),
-                    createDocument(UUID.randomUUID(), versionId, "Doc 4", "/docs/4.md", "Content 4"),
-                    createDocument(UUID.randomUUID(), versionId, "Doc 5", "/docs/5.md", "Content 5")
+                    createDocument(randomId(), versionId, "Doc 1", "/docs/1.md", "Content 1"),
+                    createDocument(randomId(), versionId, "Doc 2", "/docs/2.md", "Content 2"),
+                    createDocument(randomId(), versionId, "Doc 3", "/docs/3.md", "Content 3"),
+                    createDocument(randomId(), versionId, "Doc 4", "/docs/4.md", "Content 4"),
+                    createDocument(randomId(), versionId, "Doc 5", "/docs/5.md", "Content 5")
             );
 
             when(versionRepository.findLatestByLibraryId(libraryId))
@@ -509,16 +517,16 @@ class SearchServiceTest {
     /**
      * 建立測試用的 LibraryVersion
      */
-    private LibraryVersion createLibraryVersion(UUID id, UUID libraryId, String version, boolean isLatest) {
+    private LibraryVersion createLibraryVersion(String id, String libraryId, String version, boolean isLatest) {
         return new LibraryVersion(id, libraryId, version, isLatest, false, null,
-                null, null, null, null);
+                null, null, null, null, null);
     }
 
     /**
      * 建立測試用的 Document
      */
-    private Document createDocument(UUID id, UUID versionId, String title, String path, String content) {
+    private Document createDocument(String id, String versionId, String title, String path, String content) {
         return new Document(id, versionId, title, path, content, null, "markdown",
-                Map.of(), OffsetDateTime.now(), OffsetDateTime.now());
+                Map.of(), null, OffsetDateTime.now(), OffsetDateTime.now());
     }
 }

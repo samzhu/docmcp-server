@@ -20,13 +20,13 @@
         <div class="flex items-center justify-between mb-6">
             <div>
                 <h2 class="text-2xl font-bold text-primary">Sync Detail</h2>
-                <p class="text-secondary mt-1 font-mono text-sm" th:text="${syncDetail.id()}">sync-id</p>
+                <p class="text-secondary mt-1 font-mono text-sm" th:text="${syncDetail.id}">sync-id</p>
             </div>
             <div>
-                <span th:if="${syncDetail.status().name() == 'SUCCESS'}" class="badge badge-success text-lg px-4 py-2">Success</span>
-                <span th:if="${syncDetail.status().name() == 'RUNNING'}" class="badge badge-info text-lg px-4 py-2">Running</span>
-                <span th:if="${syncDetail.status().name() == 'FAILED'}" class="badge badge-danger text-lg px-4 py-2">Failed</span>
-                <span th:if="${syncDetail.status().name() == 'PENDING'}" class="badge badge-warning text-lg px-4 py-2">Pending</span>
+                <span th:if="${syncDetail.status.name == 'SUCCESS'}" class="badge badge-success text-lg px-4 py-2">Success</span>
+                <span th:if="${syncDetail.status.name == 'RUNNING'}" class="badge badge-info text-lg px-4 py-2">Running</span>
+                <span th:if="${syncDetail.status.name == 'FAILED'}" class="badge badge-danger text-lg px-4 py-2">Failed</span>
+                <span th:if="${syncDetail.status.name == 'PENDING'}" class="badge badge-warning text-lg px-4 py-2">Pending</span>
             </div>
         </div>
 
@@ -38,11 +38,11 @@
                 <div class="info-row">
                     <span class="info-label">Library</span>
                     <span class="info-value">
-                        <a th:if="${syncDetail.libraryId() != null}"
-                           th:href="@{/libraries/{id}(id=${syncDetail.libraryId()})}"
+                        <a th:if="${syncDetail.libraryId != null}"
+                           th:href="@{/libraries/{id}(id=${syncDetail.libraryId})}"
                            th:text="${syncDetail.libraryDisplayName()}"
                            class="text-accent hover:underline">Library</a>
-                        <span th:if="${syncDetail.libraryId() == null}" class="text-secondary">Unknown</span>
+                        <span th:if="${syncDetail.libraryId == null}" class="text-secondary">Unknown</span>
                     </span>
                 </div>
 
@@ -55,13 +55,13 @@
                 <!-- 開始時間 -->
                 <div class="info-row">
                     <span class="info-label">Started At</span>
-                    <span class="info-value" th:text="${syncDetail.startedAt() != null ? #temporals.format(syncDetail.startedAt(), 'yyyy-MM-dd HH:mm:ss') : '-'}">-</span>
+                    <span class="info-value" th:text="${syncDetail.startedAt != null ? #temporals.format(syncDetail.startedAt, 'yyyy-MM-dd HH:mm:ss') : '-'}">-</span>
                 </div>
 
                 <!-- 完成時間 -->
                 <div class="info-row">
                     <span class="info-label">Completed At</span>
-                    <span class="info-value" th:text="${syncDetail.completedAt() != null ? #temporals.format(syncDetail.completedAt(), 'yyyy-MM-dd HH:mm:ss') : '-'}">-</span>
+                    <span class="info-value" th:text="${syncDetail.completedAt != null ? #temporals.format(syncDetail.completedAt, 'yyyy-MM-dd HH:mm:ss') : '-'}">-</span>
                 </div>
 
                 <!-- 執行時間 -->
@@ -73,7 +73,7 @@
                 <!-- 版本 ID -->
                 <div class="info-row">
                     <span class="info-label">Version ID</span>
-                    <span class="info-value font-mono text-sm" th:text="${syncDetail.versionId()}">-</span>
+                    <span class="info-value font-mono text-sm" th:text="${syncDetail.versionId}">-</span>
                 </div>
             </div>
         </div>
@@ -91,7 +91,7 @@
                         </svg>
                     </div>
                     <div>
-                        <p class="stat-value" th:text="${syncDetail.documentsProcessed() != null ? syncDetail.documentsProcessed() : 0}">0</p>
+                        <p class="stat-value" th:text="${syncDetail.documentsProcessed != null ? syncDetail.documentsProcessed : 0}">0</p>
                         <p class="stat-label">Documents Processed</p>
                     </div>
                 </div>
@@ -105,7 +105,7 @@
                         </svg>
                     </div>
                     <div>
-                        <p class="stat-value" th:text="${syncDetail.chunksCreated() != null ? syncDetail.chunksCreated() : 0}">0</p>
+                        <p class="stat-value" th:text="${syncDetail.chunksCreated != null ? syncDetail.chunksCreated : 0}">0</p>
                         <p class="stat-label">Chunks Created</p>
                     </div>
                 </div>
@@ -113,7 +113,7 @@
         </div>
 
         <!-- 錯誤訊息（僅在失敗時顯示） -->
-        <div th:if="${syncDetail.status().name() == 'FAILED' && syncDetail.errorMessage() != null}" class="glass-card-static mb-6 border-danger">
+        <div th:if="${syncDetail.status.name == 'FAILED' && syncDetail.errorMessage != null}" class="glass-card-static mb-6 border-danger">
             <h3 class="text-lg font-semibold text-danger mb-4">
                 <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-5 h-5 inline mr-2">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -122,7 +122,7 @@
                 Error Message
             </h3>
             <div class="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg">
-                <pre class="text-sm text-danger whitespace-pre-wrap font-mono" th:text="${syncDetail.errorMessage()}">Error message here</pre>
+                <pre class="text-sm text-danger whitespace-pre-wrap font-mono" th:text="${syncDetail.errorMessage}">Error message here</pre>
             </div>
         </div>
 
@@ -130,8 +130,8 @@
         <div class="glass-card-static">
             <h3 class="text-lg font-semibold text-primary mb-4">Related Links</h3>
             <div class="flex flex-wrap gap-4">
-                <a th:if="${syncDetail.libraryId() != null}"
-                   th:href="@{/libraries/{id}(id=${syncDetail.libraryId()})}"
+                <a th:if="${syncDetail.libraryId != null}"
+                   th:href="@{/libraries/{id}(id=${syncDetail.libraryId})}"
                    class="btn btn-secondary">
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-4 h-4">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -139,7 +139,7 @@
                     </svg>
                     View Library
                 </a>
-                <a th:href="@{/documents(versionId=${syncDetail.versionId()})}"
+                <a th:href="@{/documents(versionId=${syncDetail.versionId})}"
                    class="btn btn-secondary">
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-4 h-4">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"

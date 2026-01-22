@@ -1,5 +1,6 @@
 package io.github.samzhu.docmcp.mcp.tool.search;
 
+import com.github.f4b6a3.tsid.TsidCreator;
 import io.github.samzhu.docmcp.mcp.dto.SearchResultItem;
 import io.github.samzhu.docmcp.mcp.dto.SemanticSearchResult;
 import io.github.samzhu.docmcp.service.SearchService;
@@ -8,7 +9,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
@@ -28,14 +28,21 @@ class SemanticSearchToolTest {
         semanticSearchTool = new SemanticSearchTool(searchService);
     }
 
+    /**
+     * 產生隨機 ID
+     */
+    private String randomId() {
+        return TsidCreator.getTsid().toString();
+    }
+
     @Test
     @DisplayName("should search with default parameters")
     void shouldSearchWithDefaultParameters() {
         // Arrange
-        UUID libraryId = UUID.randomUUID();
+        String libraryId = randomId();
         String query = "how to configure database connection";
         var expectedResults = List.of(
-                SearchResultItem.fromChunk(UUID.randomUUID(), UUID.randomUUID(),
+                SearchResultItem.fromChunk(randomId(), randomId(),
                         "Database Config", "/docs/database.md", "Content...", 0.85, 0)
         );
 
@@ -58,7 +65,7 @@ class SemanticSearchToolTest {
     @DisplayName("should search with custom limit")
     void shouldSearchWithCustomLimit() {
         // Arrange
-        UUID libraryId = UUID.randomUUID();
+        String libraryId = randomId();
         String query = "authentication setup";
         int limit = 10;
 
@@ -76,7 +83,7 @@ class SemanticSearchToolTest {
     @DisplayName("should search with custom threshold")
     void shouldSearchWithCustomThreshold() {
         // Arrange
-        UUID libraryId = UUID.randomUUID();
+        String libraryId = randomId();
         String query = "error handling";
         double threshold = 0.9;
 
@@ -96,7 +103,7 @@ class SemanticSearchToolTest {
     @DisplayName("should search with specific version")
     void shouldSearchWithSpecificVersion() {
         // Arrange
-        UUID libraryId = UUID.randomUUID();
+        String libraryId = randomId();
         String query = "migration guide";
         String version = "3.0.0";
 
@@ -114,7 +121,7 @@ class SemanticSearchToolTest {
     @DisplayName("should use default limit when limit is invalid")
     void shouldUseDefaultLimitWhenLimitIsInvalid() {
         // Arrange
-        UUID libraryId = UUID.randomUUID();
+        String libraryId = randomId();
         String query = "test";
 
         when(searchService.semanticSearch(libraryId, null, query, 5, 0.7))
@@ -131,7 +138,7 @@ class SemanticSearchToolTest {
     @DisplayName("should use default threshold when threshold is out of range")
     void shouldUseDefaultThresholdWhenOutOfRange() {
         // Arrange
-        UUID libraryId = UUID.randomUUID();
+        String libraryId = randomId();
         String query = "test";
 
         when(searchService.semanticSearch(libraryId, null, query, 5, 0.7))
@@ -153,12 +160,12 @@ class SemanticSearchToolTest {
     @DisplayName("should return results with similarity scores")
     void shouldReturnResultsWithSimilarityScores() {
         // Arrange
-        UUID libraryId = UUID.randomUUID();
+        String libraryId = randomId();
         String query = "dependency injection";
         var expectedResults = List.of(
-                SearchResultItem.fromChunk(UUID.randomUUID(), UUID.randomUUID(),
+                SearchResultItem.fromChunk(randomId(), randomId(),
                         "DI Guide", "/docs/di.md", "Content about DI...", 0.92, 0),
-                SearchResultItem.fromChunk(UUID.randomUUID(), UUID.randomUUID(),
+                SearchResultItem.fromChunk(randomId(), randomId(),
                         "IoC Container", "/docs/ioc.md", "IoC content...", 0.85, 1)
         );
 
@@ -179,7 +186,7 @@ class SemanticSearchToolTest {
     @DisplayName("should return empty results when no matches")
     void shouldReturnEmptyResultsWhenNoMatches() {
         // Arrange
-        UUID libraryId = UUID.randomUUID();
+        String libraryId = randomId();
         String query = "something very specific that doesn't exist";
 
         when(searchService.semanticSearch(libraryId, null, query, 5, 0.7))

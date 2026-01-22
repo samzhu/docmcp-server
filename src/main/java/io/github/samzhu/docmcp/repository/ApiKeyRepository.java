@@ -8,16 +8,16 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 /**
  * API Key 資料存取介面
  * <p>
  * 提供 API Key 的 CRUD 操作及自訂查詢方法。
+ * ID 類型為 TSID 字串。
  * </p>
  */
 @Repository
-public interface ApiKeyRepository extends CrudRepository<ApiKey, UUID> {
+public interface ApiKeyRepository extends CrudRepository<ApiKey, String> {
 
     /**
      * 根據前綴查找 API Key

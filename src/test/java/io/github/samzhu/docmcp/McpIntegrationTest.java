@@ -1,5 +1,6 @@
 package io.github.samzhu.docmcp;
 
+import com.github.f4b6a3.tsid.TsidCreator;
 import io.github.samzhu.docmcp.domain.enums.SourceType;
 import io.github.samzhu.docmcp.domain.model.Library;
 import io.github.samzhu.docmcp.domain.model.LibraryVersion;
@@ -42,6 +43,13 @@ class McpIntegrationTest {
     @Autowired
     private LibraryVersionRepository libraryVersionRepository;
 
+    /**
+     * 產生隨機 ID
+     */
+    private String randomId() {
+        return TsidCreator.getTsid().toString();
+    }
+
     @BeforeEach
     void setUp() {
         // 清理測試資料
@@ -69,6 +77,7 @@ class McpIntegrationTest {
     void shouldListLibrariesWithData() {
         // 準備測試資料
         var library = Library.create(
+                randomId(),
                 "spring-boot",
                 "Spring Boot",
                 "Java framework for building applications",
@@ -90,6 +99,7 @@ class McpIntegrationTest {
     void shouldResolveLibrary() {
         // 準備測試資料
         var library = Library.create(
+                randomId(),
                 "react",
                 "React",
                 "A JavaScript library for building user interfaces",
@@ -100,7 +110,7 @@ class McpIntegrationTest {
         );
         var savedLibrary = libraryRepository.save(library);
 
-        var version = LibraryVersion.create(savedLibrary.id(), "18.2.0", true);
+        var version = LibraryVersion.create(randomId(), savedLibrary.getId(), "18.2.0", true);
         libraryVersionRepository.save(version);
 
         // 測試 resolve_library
@@ -114,13 +124,13 @@ class McpIntegrationTest {
     void shouldListLibrariesByCategory() {
         // 準備測試資料
         libraryRepository.save(Library.create(
-                "react", "React", null, SourceType.GITHUB, null, "frontend", null
+                randomId(), "react", "React", null, SourceType.GITHUB, null, "frontend", null
         ));
         libraryRepository.save(Library.create(
-                "vue", "Vue.js", null, SourceType.GITHUB, null, "frontend", null
+                randomId(), "vue", "Vue.js", null, SourceType.GITHUB, null, "frontend", null
         ));
         libraryRepository.save(Library.create(
-                "spring-boot", "Spring Boot", null, SourceType.GITHUB, null, "backend", null
+                randomId(), "spring-boot", "Spring Boot", null, SourceType.GITHUB, null, "backend", null
         ));
 
         // 測試根據分類篩選

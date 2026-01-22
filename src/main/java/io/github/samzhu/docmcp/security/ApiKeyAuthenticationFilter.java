@@ -59,13 +59,13 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
                 try {
                     apiKeyService.updateLastUsed(apiKey);
                 } catch (Exception e) {
-                    log.warn("Failed to update last used time for API key: {}", apiKey.keyPrefix(), e);
+                    log.warn("Failed to update last used time for API key: {}", apiKey.getKeyPrefix(), e);
                 }
 
                 // 建立認證 Token
                 var authorities = List.of(new SimpleGrantedAuthority("ROLE_API_KEY"));
                 var authentication = new UsernamePasswordAuthenticationToken(
-                        new ApiKeyPrincipal(apiKey.id(), apiKey.name(), apiKey.keyPrefix()),
+                        new ApiKeyPrincipal(apiKey.getId(), apiKey.getName(), apiKey.getKeyPrefix()),
                         null,
                         authorities
                 );
@@ -73,7 +73,7 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
                 // 設定到 SecurityContext
                 SecurityContextHolder.getContext().setAuthentication(authentication);
 
-                log.debug("Authenticated with API key: {}", apiKey.keyPrefix());
+                log.debug("Authenticated with API key: {}", apiKey.getKeyPrefix());
             } else {
                 log.debug("Invalid API key provided");
             }
@@ -103,9 +103,13 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
 
     /**
      * API Key 認證主體
+     *
+     * @param id        金鑰 ID（TSID 格式）
+     * @param name      金鑰名稱
+     * @param keyPrefix 金鑰前綴
      */
     public record ApiKeyPrincipal(
-            java.util.UUID id,
+            String id,
             String name,
             String keyPrefix
     ) {}

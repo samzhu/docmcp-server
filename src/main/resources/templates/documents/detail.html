@@ -10,31 +10,31 @@
         <nav class="breadcrumb">
             <a th:href="@{/libraries}">Libraries</a>
             <span class="breadcrumb-separator">/</span>
-            <a th:href="@{/libraries/{id}(id=${library.id()})}" th:text="${library.displayName()}">Library</a>
+            <a th:href="@{/libraries/{id}(id=${library.id})}" th:text="${library.displayName}">Library</a>
             <span class="breadcrumb-separator">/</span>
-            <a th:href="@{/documents(versionId=${version.id()})}" th:text="${version.version()}">1.0.0</a>
+            <a th:href="@{/documents(versionId=${version.id})}" th:text="${version.version}">1.0.0</a>
             <span class="breadcrumb-separator">/</span>
-            <span class="breadcrumb-current" th:text="${document.title()}">Document Title</span>
+            <span class="breadcrumb-current" th:text="${document.title}">Document Title</span>
         </nav>
 
         <!-- 文件標題區 -->
         <div class="glass-card-static mb-6">
             <div class="flex items-start justify-between flex-wrap gap-4">
                 <div class="flex-1 min-w-0">
-                    <h1 class="text-2xl font-bold text-primary" th:text="${document.title()}">Document Title</h1>
-                    <p class="text-sm text-secondary font-mono mt-1 break-all" th:text="${document.path()}">docs/getting-started.md</p>
+                    <h1 class="text-2xl font-bold text-primary" th:text="${document.title}">Document Title</h1>
+                    <p class="text-sm text-secondary font-mono mt-1 break-all" th:text="${document.path}">docs/getting-started.md</p>
                 </div>
-                <span class="badge badge-secondary flex-shrink-0" th:text="${document.docType()} ?: 'unknown'">markdown</span>
+                <span class="badge badge-secondary flex-shrink-0" th:text="${document.docType} ?: 'unknown'">markdown</span>
             </div>
 
             <div class="mt-4 two-col-grid">
                 <div class="info-card">
                     <p class="info-card-label">Library</p>
-                    <p class="info-card-value" th:text="${library.displayName()}">Spring Boot</p>
+                    <p class="info-card-value" th:text="${library.displayName}">Spring Boot</p>
                 </div>
                 <div class="info-card">
                     <p class="info-card-label">Version</p>
-                    <p class="info-card-value font-mono" th:text="${version.version()}">3.2.0</p>
+                    <p class="info-card-value font-mono" th:text="${version.version}">3.2.0</p>
                 </div>
             </div>
         </div>
@@ -43,7 +43,7 @@
         <div class="glass-card-static">
             <h2 class="text-lg font-semibold text-primary mb-4">Content</h2>
             <div class="code-block">
-                <pre><code th:text="${document.content()}">Document content here...</code></pre>
+                <pre><code th:text="${document.content}">Document content here...</code></pre>
             </div>
         </div>
     </div>

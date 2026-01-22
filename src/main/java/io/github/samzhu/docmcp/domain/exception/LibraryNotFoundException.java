@@ -1,7 +1,5 @@
 package io.github.samzhu.docmcp.domain.exception;
 
-import java.util.UUID;
-
 /**
  * 函式庫未找到例外
  * <p>
@@ -31,20 +29,10 @@ public class LibraryNotFoundException extends RuntimeException {
     /**
      * 根據函式庫 ID 建立例外
      *
-     * @param id 函式庫 ID
+     * @param id 函式庫 ID（TSID 格式）
      * @return 例外實例
      */
     public static LibraryNotFoundException byId(String id) {
-        return new LibraryNotFoundException("找不到函式庫 ID: " + id);
-    }
-
-    /**
-     * 根據函式庫 ID (UUID) 建立例外
-     *
-     * @param id 函式庫 ID
-     * @return 例外實例
-     */
-    public static LibraryNotFoundException byId(UUID id) {
         return new LibraryNotFoundException("找不到函式庫 ID: " + id);
     }
 }

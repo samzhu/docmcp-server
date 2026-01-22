@@ -1,8 +1,10 @@
 package io.github.samzhu.docmcp.security;
 
+import com.github.f4b6a3.tsid.TsidCreator;
 import io.github.samzhu.docmcp.domain.enums.ApiKeyStatus;
 import io.github.samzhu.docmcp.domain.model.ApiKey;
 import io.github.samzhu.docmcp.repository.ApiKeyRepository;
+import io.github.samzhu.docmcp.service.IdService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -12,7 +14,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.OffsetDateTime;
 import java.util.Optional;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -27,13 +28,23 @@ import static org.mockito.Mockito.when;
 class ApiKeyServiceTest {
 
     @Mock
+    private IdService idService;
+
+    @Mock
     private ApiKeyRepository apiKeyRepository;
 
     private ApiKeyService apiKeyService;
 
+    /**
+     * 產生隨機 ID
+     */
+    private String randomId() {
+        return TsidCreator.getTsid().toString();
+    }
+
     @BeforeEach
     void setUp() {
-        apiKeyService = new ApiKeyService(apiKeyRepository);
+        apiKeyService = new ApiKeyService(idService, apiKeyRepository);
     }
 
     @Test
@@ -42,17 +53,20 @@ class ApiKeyServiceTest {
         when(apiKeyRepository.findByName("test-key")).thenReturn(Optional.empty());
         when(apiKeyRepository.save(any(ApiKey.class))).thenAnswer(invocation -> {
             ApiKey apiKey = invocation.getArgument(0);
+            var now = OffsetDateTime.now();
             return new ApiKey(
-                    UUID.randomUUID(),
-                    apiKey.name(),
-                    apiKey.keyHash(),
-                    apiKey.keyPrefix(),
-                    apiKey.status(),
-                    apiKey.rateLimit(),
-                    apiKey.expiresAt(),
-                    apiKey.lastUsedAt(),
-                    OffsetDateTime.now(),
-                    apiKey.createdBy()
+                    randomId(),
+                    apiKey.getName(),
+                    apiKey.getKeyHash(),
+                    apiKey.getKeyPrefix(),
+                    apiKey.getStatus(),
+                    apiKey.getRateLimit(),
+                    apiKey.getExpiresAt(),
+                    apiKey.getLastUsedAt(),
+                    apiKey.getCreatedBy(),
+                    0L,         // version（模擬從資料庫讀取）
+                    now,        // createdAt
+                    now         // updatedAt
             );
         });
 
@@ -70,9 +84,9 @@ class ApiKeyServiceTest {
         verify(apiKeyRepository).save(captor.capture());
 
         ApiKey savedKey = captor.getValue();
-        assertThat(savedKey.name()).isEqualTo("test-key");
-        assertThat(savedKey.status()).isEqualTo(ApiKeyStatus.ACTIVE);
-        assertThat(savedKey.createdBy()).isEqualTo("admin");
+        assertThat(savedKey.getName()).isEqualTo("test-key");
+        assertThat(savedKey.getStatus()).isEqualTo(ApiKeyStatus.ACTIVE);
+        assertThat(savedKey.getCreatedBy()).isEqualTo("admin");
     }
 
     @Test
@@ -102,7 +116,7 @@ class ApiKeyServiceTest {
 
         // 驗證
         assertThat(result).isPresent();
-        assertThat(result.get().name()).isEqualTo("test-key");
+        assertThat(result.get().getName()).isEqualTo("test-key");
     }
 
     @Test
@@ -132,11 +146,11 @@ class ApiKeyServiceTest {
     @Test
     void shouldRevokeApiKey() {
         // 準備
-        UUID keyId = UUID.randomUUID();
+        String keyId = randomId();
         var apiKey = createApiKey("test-key", "dmcp_test1234");
-        apiKey = new ApiKey(keyId, apiKey.name(), apiKey.keyHash(), apiKey.keyPrefix(),
-                apiKey.status(), apiKey.rateLimit(), apiKey.expiresAt(), apiKey.lastUsedAt(),
-                apiKey.createdAt(), apiKey.createdBy());
+        apiKey = new ApiKey(keyId, apiKey.getName(), apiKey.getKeyHash(), apiKey.getKeyPrefix(),
+                apiKey.getStatus(), apiKey.getRateLimit(), apiKey.getExpiresAt(), apiKey.getLastUsedAt(),
+                apiKey.getCreatedBy(), 0L, apiKey.getCreatedAt(), apiKey.getUpdatedAt());
 
         when(apiKeyRepository.findById(keyId)).thenReturn(Optional.of(apiKey));
         when(apiKeyRepository.save(any(ApiKey.class))).thenAnswer(invocation -> invocation.getArgument(0));
@@ -148,24 +162,25 @@ class ApiKeyServiceTest {
         ArgumentCaptor<ApiKey> captor = ArgumentCaptor.forClass(ApiKey.class);
         verify(apiKeyRepository).save(captor.capture());
 
-        assertThat(captor.getValue().status()).isEqualTo(ApiKeyStatus.REVOKED);
+        assertThat(captor.getValue().getStatus()).isEqualTo(ApiKeyStatus.REVOKED);
     }
 
     @Test
     void shouldThrowExceptionWhenRevokingNonexistentKey() {
         // 準備
-        UUID keyId = UUID.randomUUID();
+        String keyId = randomId();
         when(apiKeyRepository.findById(keyId)).thenReturn(Optional.empty());
 
         // 執行 & 驗證
         assertThatThrownBy(() -> apiKeyService.revokeKey(keyId))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining(keyId.toString());
+                .hasMessageContaining(keyId);
     }
 
     private ApiKey createApiKey(String name, String keyPrefix) {
+        var now = OffsetDateTime.now();
         return new ApiKey(
-                UUID.randomUUID(),
+                randomId(),
                 name,
                 "$2a$10$dummyhash",  // 假的雜湊
                 keyPrefix,
@@ -173,8 +188,10 @@ class ApiKeyServiceTest {
                 1000,
                 null,
                 null,
-                OffsetDateTime.now(),
-                "system"
+                "system",
+                0L,         // version（模擬從資料庫讀取）
+                now,        // createdAt
+                now         // updatedAt
         );
     }
 
@@ -183,9 +200,10 @@ class ApiKeyServiceTest {
         org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder encoder =
                 new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder();
         String hash = encoder.encode(rawKey);
+        var now = OffsetDateTime.now();
 
         return new ApiKey(
-                UUID.randomUUID(),
+                randomId(),
                 "test-key",
                 hash,
                 keyPrefix,
@@ -193,8 +211,10 @@ class ApiKeyServiceTest {
                 1000,
                 null,
                 null,
-                OffsetDateTime.now(),
-                "system"
+                "system",
+                0L,         // version（模擬從資料庫讀取）
+                now,        // createdAt
+                now         // updatedAt
         );
     }
 }

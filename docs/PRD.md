@@ -1,6 +1,6 @@
 # DocMCP Server - Product Requirements Document (PRD)
 
-> **版本**：1.7.0
+> **版本**：1.8.0
 > **最後更新**：2026-01-22
 > **狀態**：Draft
 > **作者**：samzhu
@@ -87,6 +87,10 @@ dependencies {
     // Google GenAI 嵌入模型（使用 starter 自動配置）
     // 使用 Gemini gemini-embedding-001，支援 768/1536/3072 維度
     implementation 'org.springframework.ai:spring-ai-starter-model-google-genai-embedding'
+
+    // ===== ID 生成（ID Generation）=====
+    // TSID 生成器，用於生成時間排序唯一識別碼
+    implementation 'com.github.f4b6a3:tsid-creator:5.2.6'
 
     // ===== 文件解析（Document Parsing）=====
     // HTML 解析（擷取 DOM 元素）
@@ -691,7 +695,7 @@ MCP Prompts 提供預定義的提示模板，讓使用者在 AI 助手中可以�
 ┌─────────────────┐       ┌─────────────────┐       ┌─────────────────┐
 │    Library      │       │ LibraryVersion  │       │    Document     │
 ├─────────────────┤       ├─────────────────┤       ├─────────────────┤
-│ id (UUID)       │──┐    │ id (UUID)       │──┐    │ id (UUID)       │
+│ id (TSID)       │──┐    │ id (TSID)       │──┐    │ id (TSID)       │
 │ name            │  │    │ library_id (FK) │  │    │ version_id (FK) │
 │ displayName     │  └───>│ version         │  └───>│ uri             │
 │ description     │       │ status          │       │ title           │
@@ -707,8 +711,8 @@ MCP Prompts 提供預定義的提示模板，讓使用者在 AI 助手中可以�
         │              ┌─────────────────┐            ▼             ▼
         │              │   SyncHistory   │  ┌─────────────────┐ ┌─────────────────┐
         │              ├─────────────────┤  │  DocumentChunk  │ │   CodeExample   │
-        │              │ id (UUID)       │  ├─────────────────┤ ├─────────────────┤
-        └─────────────>│ library_id (FK) │  │ id (UUID)       │ │ id (UUID)       │
+        │              │ id (TSID)       │  ├─────────────────┤ ├─────────────────┤
+        └─────────────>│ library_id (FK) │  │ id (TSID)       │ │ id (TSID)       │
                        │ version_id (FK) │  │ document_id(FK) │ │ document_id(FK) │
                        │ status          │  │ chunkIndex      │ │ title           │
                        │ started_at      │  │ content         │ │ language        │
@@ -728,14 +732,13 @@ MCP Prompts 提供預定義的提示模板，讓使用者在 AI 助手中可以�
 -- 啟用必要的 PostgreSQL 擴充套件
 -- =====================================================
 CREATE EXTENSION IF NOT EXISTS vector;      -- pgvector：向量儲存與相似度搜尋
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp"; -- UUID 生成函數
 
 -- =====================================================
 -- 函式庫表（Library）
 -- 說明：儲存文件庫的基本資訊，例如 Spring Boot、React 等
 -- =====================================================
 CREATE TABLE libraries (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),  -- 主鍵，使用 UUID
+    id VARCHAR(13) PRIMARY KEY,  -- 主鍵，使用 TSID（13 字元 Crockford Base32 格式）
     name VARCHAR(100) NOT NULL UNIQUE,               -- 唯一識別名稱（例：spring-boot）
     display_name VARCHAR(255) NOT NULL,              -- 顯示名稱（例：Spring Boot）
     description TEXT,                                 -- 函式庫描述
@@ -752,8 +755,8 @@ CREATE TABLE libraries (
 -- 說明：儲存函式庫的各個版本資訊
 -- =====================================================
 CREATE TABLE library_versions (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    library_id UUID NOT NULL REFERENCES libraries(id) ON DELETE CASCADE,  -- 關聯到函式庫
+    id VARCHAR(13) PRIMARY KEY,
+    library_id VARCHAR(13) NOT NULL REFERENCES libraries(id) ON DELETE CASCADE,  -- 關聯到函式庫
     version VARCHAR(50) NOT NULL,                    -- 版本號（例：3.5.0）
     status VARCHAR(20) DEFAULT 'active',             -- 狀態：active（使用中）, deprecated（已棄用）, eol（終止支援）
     is_latest BOOLEAN DEFAULT FALSE,                 -- 是否為最新版本
@@ -769,8 +772,8 @@ CREATE TABLE library_versions (
 -- 說明：儲存文件的原始內容和元資料
 -- =====================================================
 CREATE TABLE documents (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    version_id UUID NOT NULL REFERENCES library_versions(id) ON DELETE CASCADE,  -- 關聯到版本
+    id VARCHAR(13) PRIMARY KEY,
+    version_id VARCHAR(13) NOT NULL REFERENCES library_versions(id) ON DELETE CASCADE,  -- 關聯到版本
     uri TEXT NOT NULL,                               -- 文件 URI（例：/docs/getting-started.md）
     title VARCHAR(500),                              -- 文件標題
     content TEXT,                                    -- 文件完整內容
@@ -787,8 +790,8 @@ CREATE TABLE documents (
 -- 這是實現語意搜尋的核心資料表
 -- =====================================================
 CREATE TABLE document_chunks (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    document_id UUID NOT NULL REFERENCES documents(id) ON DELETE CASCADE,  -- 關聯到文件
+    id VARCHAR(13) PRIMARY KEY,
+    document_id VARCHAR(13) NOT NULL REFERENCES documents(id) ON DELETE CASCADE,  -- 關聯到文件
     chunk_index INTEGER NOT NULL,                    -- 區塊在文件中的順序（0, 1, 2...）
     content TEXT NOT NULL,                           -- 區塊內容（約 500-1000 字元）
     search_vector tsvector,                          -- 全文搜尋向量（PostgreSQL 內建）
@@ -803,8 +806,8 @@ CREATE TABLE document_chunks (
 -- 說明：從文件中擷取的程式碼範例
 -- =====================================================
 CREATE TABLE code_examples (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    document_id UUID NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+    id VARCHAR(13) PRIMARY KEY,
+    document_id VARCHAR(13) NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
     title VARCHAR(255),                              -- 範例標題
     language VARCHAR(50) NOT NULL,                   -- 程式語言（java, kotlin, python 等）
     code TEXT NOT NULL,                              -- 程式碼內容
@@ -823,9 +826,8 @@ CREATE TABLE code_examples (
 -- 說明：記錄每次文件同步的執行狀態和統計資訊
 -- =====================================================
 CREATE TABLE sync_history (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    library_id UUID NOT NULL REFERENCES libraries(id) ON DELETE CASCADE,
-    version_id UUID REFERENCES library_versions(id) ON DELETE SET NULL,
+    id VARCHAR(13) PRIMARY KEY,
+    version_id VARCHAR(13) NOT NULL REFERENCES library_versions(id) ON DELETE CASCADE,
     status VARCHAR(20) NOT NULL,                     -- 狀態：PENDING, RUNNING, SUCCESS, FAILED, PARTIAL
     started_at TIMESTAMP WITH TIME ZONE NOT NULL,   -- 開始時間
     completed_at TIMESTAMP WITH TIME ZONE,           -- 完成時間
@@ -1234,7 +1236,7 @@ final_score = (1 - α) × semantic_score + α × keyword_score
 
 ```sql
 CREATE TABLE api_keys (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    id VARCHAR(13) PRIMARY KEY,
     name VARCHAR(100) NOT NULL,          -- 識別名稱 (e.g., "Claude Desktop - Work")
     key_hash VARCHAR(255) NOT NULL,      -- BCrypt 雜湊後的 API Key
     key_prefix VARCHAR(8) NOT NULL,      -- Key 前綴用於識別 (e.g., "dmcp_a1b2")
@@ -1337,6 +1339,7 @@ docmcp:
 | **Embedding** | 文字的向量表示，用於語意搜尋 |
 | **Chunk** | 文件切割後的片段，適合向量化 |
 | **pgvector** | PostgreSQL 的向量搜尋擴展 |
+| **TSID** | Time-Sorted Unique Identifier，時間排序唯一識別碼，13 字元 Crockford Base32 格式 |
 
 ---
 
@@ -1352,3 +1355,5 @@ docmcp:
 | 1.5.0 | 2026-01-19 | MCP 協議改為 STATELESS（適合雲端部署、無狀態水平擴展），修正 spring.ai.mcp.server.protocol 設定 | samzhu |
 | 1.6.0 | 2026-01-20 | 明確 HTTPS 由外部處理（Cloud Run 等反向代理），應用層不需處理 | samzhu |
 | 1.7.0 | 2026-01-22 | 同步專案現狀：更新 Gradle 依賴（改用 starter 版本）、標記所有 MCP Tools/Resources 為已完成、新增 MCP Prompts 章節（5 個 Prompts）、更新 Web UI 頁面清單 | Claude |
+| 1.8.0 | 2026-01-22 | ID 系統遷移：UUID 改為 TSID（Time-Sorted Unique Identifier），使用 13 字元 Crockford Base32 格式，由應用層使用 tsid-creator 函式庫生成；Entity 實作 Persistable 接口支援預設 ID；TEXT 欄位加入 @Size 驗證限制 | Claude |
+| 1.9.0 | 2026-01-23 | Entity 簡化重構：改用 Lombok @Value + @With 實現 Immutable Entity，移除 Persistable 介面；@Version 進行樂觀鎖定，version=null 表示新實體（INSERT）；LibraryVersion 的樂觀鎖定欄位改名為 entityVersion 避免與業務欄位 version 衝突 | Claude |

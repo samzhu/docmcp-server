@@ -2,6 +2,7 @@ package io.github.samzhu.docmcp.infrastructure.vectorstore;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.f4b6a3.tsid.TsidCreator;
 import com.pgvector.PGvector;
 import org.postgresql.util.PGobject;
 import org.slf4j.Logger;
@@ -26,7 +27,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 /**
  * DocumentChunk VectorStore 實作
@@ -63,9 +63,10 @@ public class DocumentChunkVectorStore implements VectorStore {
     private static final int EMBEDDING_BATCH_SIZE = 100;
 
     // SQL 語句常數 - 參考 Spring AI PgVectorStore，使用參數佔位符而非 EXCLUDED
+    // ID 欄位現為 CHAR(13) TSID 格式，不需要 ::uuid 轉換
     private static final String SQL_INSERT = """
         INSERT INTO document_chunks (id, document_id, chunk_index, content, embedding, token_count, metadata, created_at)
-        VALUES (?::uuid, ?::uuid, ?, ?, ?, ?, ?::jsonb, CURRENT_TIMESTAMP)
+        VALUES (?, ?, ?, ?, ?, ?, ?::jsonb, CURRENT_TIMESTAMP)
         ON CONFLICT (id) DO UPDATE SET
             content = ?,
             embedding = ?,
@@ -160,9 +161,9 @@ public class DocumentChunkVectorStore implements VectorStore {
                     float[] embedding = embeddings.get(i);
                     PGvector pGvector = new PGvector(embedding);
 
-                    // 準備參數值
-                    String id = doc.getId() != null ? doc.getId() : UUID.randomUUID().toString();
-                    String documentId = getStringFromMetadata(metadata, METADATA_DOCUMENT_ID, UUID.randomUUID().toString());
+                    // 準備參數值（使用 TSID 作為 ID）
+                    String id = doc.getId() != null ? doc.getId() : TsidCreator.getTsid().toString();
+                    String documentId = getStringFromMetadata(metadata, METADATA_DOCUMENT_ID, TsidCreator.getTsid().toString());
                     int chunkIndex = getIntFromMetadata(metadata, METADATA_CHUNK_INDEX, 0);
                     String content = doc.getText();
                     int tokenCount = getIntFromMetadata(metadata, METADATA_TOKEN_COUNT, 0);
@@ -211,12 +212,12 @@ public class DocumentChunkVectorStore implements VectorStore {
 
         log.info("刪除 {} 個文件區塊", idList.size());
 
-        // 參考官方風格，使用 BatchPreparedStatementSetter
+        // 參考官方風格，使用 BatchPreparedStatementSetter（ID 現為 TSID 字串格式）
         jdbcTemplate.batchUpdate(SQL_DELETE_BY_ID, new BatchPreparedStatementSetter() {
             @Override
             public void setValues(PreparedStatement ps, int i) throws SQLException {
                 String id = idList.get(i);
-                StatementCreatorUtils.setParameterValue(ps, 1, SqlTypeValue.TYPE_UNKNOWN, UUID.fromString(id));
+                StatementCreatorUtils.setParameterValue(ps, 1, SqlTypeValue.TYPE_UNKNOWN, id);
             }
 
             @Override

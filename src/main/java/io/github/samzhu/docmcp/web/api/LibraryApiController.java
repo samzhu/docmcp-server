@@ -28,7 +28,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -90,23 +89,23 @@ public class LibraryApiController {
     /**
      * 取得單一函式庫
      *
-     * @param id 函式庫 ID
+     * @param id 函式庫 ID（TSID 格式）
      * @return 函式庫資訊
      */
     @GetMapping("/{id}")
-    public WebLibraryDto getLibrary(@PathVariable UUID id) {
+    public WebLibraryDto getLibrary(@PathVariable String id) {
         return WebLibraryDto.from(libraryService.getLibraryById(id));
     }
 
     /**
      * 更新函式庫
      *
-     * @param id      函式庫 ID
+     * @param id      函式庫 ID（TSID 格式）
      * @param request 更新請求
      * @return 更新後的函式庫
      */
     @PutMapping("/{id}")
-    public WebLibraryDto updateLibrary(@PathVariable UUID id,
+    public WebLibraryDto updateLibrary(@PathVariable String id,
                                         @RequestBody @Valid UpdateLibraryRequest request) {
         Library library = libraryService.updateLibrary(
                 id,
@@ -123,10 +122,10 @@ public class LibraryApiController {
     /**
      * 刪除函式庫
      *
-     * @param id 函式庫 ID
+     * @param id 函式庫 ID（TSID 格式）
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteLibrary(@PathVariable UUID id) {
+    public ResponseEntity<Void> deleteLibrary(@PathVariable String id) {
         libraryService.deleteLibrary(id);
         return ResponseEntity.noContent().build();
     }
@@ -134,11 +133,11 @@ public class LibraryApiController {
     /**
      * 取得函式庫的所有版本
      *
-     * @param id 函式庫 ID
+     * @param id 函式庫 ID（TSID 格式）
      * @return 版本列表
      */
     @GetMapping("/{id}/versions")
-    public List<LibraryVersionDto> listVersions(@PathVariable UUID id) {
+    public List<LibraryVersionDto> listVersions(@PathVariable String id) {
         return libraryService.getLibraryVersionsById(id).stream()
                 .map(LibraryVersionDto::from)
                 .toList();
@@ -147,33 +146,33 @@ public class LibraryApiController {
     /**
      * 觸發同步
      *
-     * @param id      函式庫 ID
+     * @param id      函式庫 ID（TSID 格式）
      * @param request 同步請求（包含版本）
      * @return 同步歷史
      */
     @PostMapping("/{id}/sync")
-    public ResponseEntity<SyncHistoryDto> triggerSync(@PathVariable UUID id,
+    public ResponseEntity<SyncHistoryDto> triggerSync(@PathVariable String id,
                                                        @RequestBody @Valid TriggerSyncRequest request) {
         Library library = libraryService.getLibraryById(id);
 
         // 解析 GitHub URL
-        Matcher matcher = GITHUB_URL_PATTERN.matcher(library.sourceUrl());
+        Matcher matcher = GITHUB_URL_PATTERN.matcher(library.getSourceUrl());
         if (!matcher.matches()) {
-            throw new IllegalArgumentException("無效的 GitHub URL: " + library.sourceUrl());
+            throw new IllegalArgumentException("無效的 GitHub URL: " + library.getSourceUrl());
         }
 
         String owner = matcher.group(1);
         String repo = matcher.group(2);
 
         // 取得或建立版本
-        LibraryVersion version = libraryService.resolveLibrary(library.name(), request.version()).version();
+        LibraryVersion version = libraryService.resolveLibrary(library.getName(), request.version()).version();
 
         // 觸發同步
         SyncHistory syncHistory = syncService.syncFromGitHub(
-                version.id(),
+                version.getId(),
                 owner,
                 repo,
-                version.docsPath() != null ? version.docsPath() : "docs",
+                version.getDocsPath() != null ? version.getDocsPath() : "docs",
                 "v" + request.version()
         ).join();
 
@@ -187,12 +186,12 @@ public class LibraryApiController {
      * 已存在於系統中的版本會被標記。
      * </p>
      *
-     * @param id    函式庫 ID
+     * @param id    函式庫 ID（TSID 格式）
      * @param limit 回傳數量上限（預設 20）
      * @return GitHub Releases 回應
      */
     @GetMapping("/{id}/github-releases")
-    public GitHubReleasesResponse getGitHubReleases(@PathVariable UUID id,
+    public GitHubReleasesResponse getGitHubReleases(@PathVariable String id,
                                                      @RequestParam(defaultValue = "20") int limit) {
         return libraryService.getGitHubReleases(id, limit);
     }
@@ -203,12 +202,12 @@ public class LibraryApiController {
      * 一次建立多個版本並觸發同步任務。
      * </p>
      *
-     * @param id      函式庫 ID
+     * @param id      函式庫 ID（TSID 格式）
      * @param request 批次同步請求
      * @return 批次同步回應
      */
     @PostMapping("/{id}/batch-sync")
-    public ResponseEntity<BatchSyncResponse> batchSync(@PathVariable UUID id,
+    public ResponseEntity<BatchSyncResponse> batchSync(@PathVariable String id,
                                                         @RequestBody @Valid BatchSyncRequest request) {
         BatchSyncResponse response = libraryService.batchCreateAndSync(id, request);
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(response);

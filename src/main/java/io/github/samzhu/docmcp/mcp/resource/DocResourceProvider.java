@@ -56,7 +56,7 @@ public class DocResourceProvider {
         var libraryVersion = resolved.version();
 
         // 查找文件
-        var document = documentRepository.findByVersionIdAndPath(libraryVersion.id(), path)
+        var document = documentRepository.findByVersionIdAndPath(libraryVersion.getId(), path)
                 .orElseThrow(() -> new LibraryNotFoundException(
                         "文件不存在: " + path + " (version: " + version + ")"));
 
@@ -67,7 +67,7 @@ public class DocResourceProvider {
                 new TextResourceContents(
                         resourceUri,
                         "text/markdown",
-                        document.content()
+                        document.getContent()
                 )
         ));
     }
@@ -94,7 +94,7 @@ public class DocResourceProvider {
         var libraryVersion = resolved.version();
 
         // 查找文件
-        var document = documentRepository.findByVersionIdAndPath(libraryVersion.id(), path)
+        var document = documentRepository.findByVersionIdAndPath(libraryVersion.getId(), path)
                 .orElseThrow(() -> new LibraryNotFoundException(
                         "文件不存在: " + path));
 
@@ -105,7 +105,7 @@ public class DocResourceProvider {
                 new TextResourceContents(
                         resourceUri,
                         "text/markdown",
-                        document.content()
+                        document.getContent()
                 )
         ));
     }

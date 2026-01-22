@@ -19,7 +19,8 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
+
+import com.github.f4b6a3.tsid.TsidCreator;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -50,8 +51,8 @@ class GetSyncStatusToolTest {
     @DisplayName("應回傳函式庫的同步狀態與歷史")
     void shouldReturnSyncStatusAndHistory() {
         // Arrange
-        var libraryId = UUID.randomUUID();
-        var versionId = UUID.randomUUID();
+        var libraryId = randomId();
+        var versionId = randomId();
         var library = createLibrary(libraryId, "spring-boot", "Spring Boot");
         var version = createVersion(versionId, libraryId, "3.2.0", true);
         var resolvedLibrary = new LibraryService.ResolvedLibrary(library, version, "3.2.0");
@@ -73,9 +74,9 @@ class GetSyncStatusToolTest {
         var result = getSyncStatusTool.getSyncStatus("spring-boot", null);
 
         // Assert
-        assertThat(result.libraryId()).isEqualTo(libraryId.toString());
+        assertThat(result.libraryId()).isEqualTo(libraryId);
         assertThat(result.libraryName()).isEqualTo("spring-boot");
-        assertThat(result.versionId()).isEqualTo(versionId.toString());
+        assertThat(result.versionId()).isEqualTo(versionId);
         assertThat(result.version()).isEqualTo("3.2.0");
         assertThat(result.isRunning()).isFalse();
         assertThat(result.latestSync()).isNotNull();
@@ -87,8 +88,8 @@ class GetSyncStatusToolTest {
     @DisplayName("當有正在執行的同步任務時應標記 isRunning 為 true")
     void shouldIndicateRunningTaskWhenSyncIsInProgress() {
         // Arrange
-        var libraryId = UUID.randomUUID();
-        var versionId = UUID.randomUUID();
+        var libraryId = randomId();
+        var versionId = randomId();
         var library = createLibrary(libraryId, "react", "React");
         var version = createVersion(versionId, libraryId, "18.2.0", true);
         var resolvedLibrary = new LibraryService.ResolvedLibrary(library, version, "18.2.0");
@@ -113,8 +114,8 @@ class GetSyncStatusToolTest {
     @DisplayName("應支援指定版本查詢同步狀態")
     void shouldSupportVersionSpecificQuery() {
         // Arrange
-        var libraryId = UUID.randomUUID();
-        var versionId = UUID.randomUUID();
+        var libraryId = randomId();
+        var versionId = randomId();
         var library = createLibrary(libraryId, "spring-boot", "Spring Boot");
         var version = createVersion(versionId, libraryId, "3.1.0", false);
         var resolvedLibrary = new LibraryService.ResolvedLibrary(library, version, "3.1.0");
@@ -132,15 +133,15 @@ class GetSyncStatusToolTest {
 
         // Assert
         assertThat(result.version()).isEqualTo("3.1.0");
-        assertThat(result.versionId()).isEqualTo(versionId.toString());
+        assertThat(result.versionId()).isEqualTo(versionId);
     }
 
     @Test
     @DisplayName("當沒有同步歷史時應回傳空資訊")
     void shouldReturnEmptyWhenNoSyncHistory() {
         // Arrange
-        var libraryId = UUID.randomUUID();
-        var versionId = UUID.randomUUID();
+        var libraryId = randomId();
+        var versionId = randomId();
         var library = createLibrary(libraryId, "new-lib", "New Library");
         var version = createVersion(versionId, libraryId, "1.0.0", true);
         var resolvedLibrary = new LibraryService.ResolvedLibrary(library, version, "1.0.0");
@@ -172,25 +173,34 @@ class GetSyncStatusToolTest {
                 .isInstanceOf(LibraryNotFoundException.class);
     }
 
-    private Library createLibrary(UUID id, String name, String displayName) {
-        return new Library(id, name, displayName, null, null, null, null, null, null, null);
+    // 產生隨機 ID 的輔助方法
+    private String randomId() {
+        return TsidCreator.getTsid().toString();
     }
 
-    private LibraryVersion createVersion(UUID id, UUID libraryId, String version, boolean isLatest) {
-        return new LibraryVersion(id, libraryId, version, isLatest, false, VersionStatus.ACTIVE, null, null, null, null);
+    private Library createLibrary(String id, String name, String displayName) {
+        return new Library(id, name, displayName, null, null, null, null, null, null, null, null);
     }
 
-    private SyncHistory createSyncHistory(UUID versionId, SyncStatus status, int docs, int chunks) {
+    private LibraryVersion createVersion(String id, String libraryId, String version, boolean isLatest) {
+        return new LibraryVersion(id, libraryId, version, isLatest, false, VersionStatus.ACTIVE, null, null, null, null, null);
+    }
+
+    private SyncHistory createSyncHistory(String versionId, SyncStatus status, int docs, int chunks) {
+        var now = OffsetDateTime.now();
         return new SyncHistory(
-                UUID.randomUUID(),
+                randomId(),
                 versionId,
                 status,
-                OffsetDateTime.now().minusHours(1),
-                status == SyncStatus.RUNNING ? null : OffsetDateTime.now(),
+                now.minusHours(1),
+                status == SyncStatus.RUNNING ? null : now,
                 docs,
                 chunks,
                 status == SyncStatus.FAILED ? "Sync failed due to network error" : null,
-                Map.of()
+                Map.of(),
+                null,                // version
+                now.minusHours(1),   // createdAt
+                now                  // updatedAt
         );
     }
 }

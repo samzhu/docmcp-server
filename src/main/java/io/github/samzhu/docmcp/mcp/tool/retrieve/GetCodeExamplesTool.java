@@ -7,8 +7,6 @@ import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Component;
 
-import java.util.UUID;
-
 /**
  * get_code_examples MCP 工具
  * <p>
@@ -51,8 +49,8 @@ public class GetCodeExamplesTool {
                     回傳：程式碼範例列表，包含程式語言、程式碼內容及說明。
                     """)
     public GetCodeExamplesResult getCodeExamples(
-            @ToolParam(description = "函式庫 ID（UUID 格式）")
-            UUID libraryId,
+            @ToolParam(description = "函式庫 ID（TSID 格式）")
+            String libraryId,
             @ToolParam(description = "版本，預設為最新版", required = false)
             String version,
             @ToolParam(description = "程式語言篩選（如 java、javascript、python）", required = false)

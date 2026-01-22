@@ -1,5 +1,6 @@
 package io.github.samzhu.docmcp.service;
 
+import com.github.f4b6a3.tsid.TsidCreator;
 import io.github.samzhu.docmcp.config.KnownDocsPathsProperties;
 import io.github.samzhu.docmcp.domain.enums.SourceType;
 import io.github.samzhu.docmcp.domain.enums.VersionStatus;
@@ -17,7 +18,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -28,6 +28,9 @@ import static org.mockito.Mockito.when;
  */
 @ExtendWith(MockitoExtension.class)
 class LibraryServiceTest {
+
+    @Mock
+    private IdService idService;
 
     @Mock
     private LibraryRepository libraryRepository;
@@ -49,9 +52,17 @@ class LibraryServiceTest {
 
     private LibraryService libraryService;
 
+    /**
+     * 產生隨機 ID
+     */
+    private String randomId() {
+        return TsidCreator.getTsid().toString();
+    }
+
     @BeforeEach
     void setUp() {
         libraryService = new LibraryService(
+                idService,
                 libraryRepository,
                 libraryVersionRepository,
                 gitHubClient,
@@ -87,7 +98,7 @@ class LibraryServiceTest {
         var result = libraryService.listLibraries("frontend");
 
         assertThat(result).hasSize(2);
-        assertThat(result).allMatch(lib -> lib.category().equals("frontend"));
+        assertThat(result).allMatch(lib -> lib.getCategory().equals("frontend"));
     }
 
     @Test
@@ -95,9 +106,9 @@ class LibraryServiceTest {
         // 測試解析函式庫的最新版本
         // LibraryService 委派版本解析給 VersionService
         var library = createLibrary("spring-boot", "Spring Boot", "backend");
-        var version = createVersion(library.id(), "3.2.0", true);
+        var version = createVersion(library.getId(), "3.2.0", true);
         when(libraryRepository.findByName("spring-boot")).thenReturn(Optional.of(library));
-        when(versionService.resolveVersion(library.id(), null)).thenReturn(version);
+        when(versionService.resolveVersion(library.getId(), null)).thenReturn(version);
 
         var result = libraryService.resolveLibrary("spring-boot", null);
 
@@ -111,9 +122,9 @@ class LibraryServiceTest {
         // 測試解析函式庫的指定版本
         // LibraryService 委派版本解析給 VersionService
         var library = createLibrary("spring-boot", "Spring Boot", "backend");
-        var version = createVersion(library.id(), "3.1.0", false);
+        var version = createVersion(library.getId(), "3.1.0", false);
         when(libraryRepository.findByName("spring-boot")).thenReturn(Optional.of(library));
-        when(versionService.resolveVersion(library.id(), "3.1.0")).thenReturn(version);
+        when(versionService.resolveVersion(library.getId(), "3.1.0")).thenReturn(version);
 
         var result = libraryService.resolveLibrary("spring-boot", "3.1.0");
 
@@ -136,9 +147,9 @@ class LibraryServiceTest {
         // LibraryService 委派版本查詢給 VersionService
         var library = createLibrary("spring-boot", "Spring Boot", "backend");
         var versions = List.of(
-                createVersion(library.id(), "3.2.0", true),
-                createVersion(library.id(), "3.1.0", false),
-                createVersion(library.id(), "2.7.0", false)
+                createVersion(library.getId(), "3.2.0", true),
+                createVersion(library.getId(), "3.1.0", false),
+                createVersion(library.getId(), "2.7.0", false)
         );
         when(versionService.getVersionsByLibraryName("spring-boot")).thenReturn(versions);
 
@@ -152,7 +163,7 @@ class LibraryServiceTest {
      */
     private Library createLibrary(String name, String displayName, String category) {
         return new Library(
-                UUID.randomUUID(),
+                randomId(),
                 name,
                 displayName,
                 null,
@@ -160,6 +171,7 @@ class LibraryServiceTest {
                 null,
                 category,
                 null,
+                null,  // version
                 null,
                 null
         );
@@ -168,9 +180,9 @@ class LibraryServiceTest {
     /**
      * 建立測試用的版本
      */
-    private LibraryVersion createVersion(UUID libraryId, String version, boolean isLatest) {
+    private LibraryVersion createVersion(String libraryId, String version, boolean isLatest) {
         return new LibraryVersion(
-                UUID.randomUUID(),
+                randomId(),
                 libraryId,
                 version,
                 isLatest,
@@ -178,6 +190,7 @@ class LibraryServiceTest {
                 VersionStatus.ACTIVE,
                 null,
                 null,
+                null,  // entityVersion
                 null,
                 null
         );

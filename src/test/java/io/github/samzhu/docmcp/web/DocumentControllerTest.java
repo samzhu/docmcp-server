@@ -1,5 +1,6 @@
 package io.github.samzhu.docmcp.web;
 
+import com.github.f4b6a3.tsid.TsidCreator;
 import io.github.samzhu.docmcp.TestConfig;
 import io.github.samzhu.docmcp.TestcontainersConfiguration;
 import io.github.samzhu.docmcp.domain.enums.SourceType;
@@ -26,7 +27,6 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
@@ -55,6 +55,13 @@ class DocumentControllerTest {
     @MockitoBean
     private LibraryService libraryService;
 
+    /**
+     * 產生隨機 ID
+     */
+    private String randomId() {
+        return TsidCreator.getTsid().toString();
+    }
+
     @BeforeEach
     void setUp() {
         mockMvc = MockMvcBuilders
@@ -67,9 +74,9 @@ class DocumentControllerTest {
     @WithMockUser
     void shouldShowDocumentListPage() throws Exception {
         // Arrange
-        UUID versionId = UUID.randomUUID();
-        UUID libraryId = UUID.randomUUID();
-        UUID docId = UUID.randomUUID();
+        String versionId = randomId();
+        String libraryId = randomId();
+        String docId = randomId();
 
         Library library = createLibrary(libraryId, "spring-boot", "Spring Boot");
         LibraryVersion version = createVersion(versionId, libraryId, "3.2.0", true);
@@ -80,7 +87,7 @@ class DocumentControllerTest {
         when(documentRepository.findByVersionIdOrderByPathAsc(versionId)).thenReturn(List.of(document));
 
         // Act & Assert
-        mockMvc.perform(get("/documents").param("versionId", versionId.toString()))
+        mockMvc.perform(get("/documents").param("versionId", versionId))
                 .andExpect(status().isOk())
                 .andExpect(view().name("documents/list"))
                 .andExpect(model().attributeExists("documents"))
@@ -92,9 +99,9 @@ class DocumentControllerTest {
     @WithMockUser
     void shouldShowDocumentDetailPage() throws Exception {
         // Arrange
-        UUID docId = UUID.randomUUID();
-        UUID versionId = UUID.randomUUID();
-        UUID libraryId = UUID.randomUUID();
+        String docId = randomId();
+        String versionId = randomId();
+        String libraryId = randomId();
 
         Library library = createLibrary(libraryId, "spring-boot", "Spring Boot");
         LibraryVersion version = createVersion(versionId, libraryId, "3.2.0", true);
@@ -117,7 +124,7 @@ class DocumentControllerTest {
     @WithMockUser
     void shouldReturn404WhenDocumentNotFound() throws Exception {
         // Arrange
-        UUID docId = UUID.randomUUID();
+        String docId = randomId();
         when(documentService.getDocument(docId)).thenReturn(Optional.empty());
 
         // Act & Assert
@@ -125,16 +132,16 @@ class DocumentControllerTest {
                 .andExpect(status().isNotFound());
     }
 
-    private Library createLibrary(UUID id, String name, String displayName) {
-        return new Library(id, name, displayName, null, SourceType.GITHUB, null, null, null, null, null);
+    private Library createLibrary(String id, String name, String displayName) {
+        return new Library(id, name, displayName, null, SourceType.GITHUB, null, null, null, 0L, null, null);
     }
 
-    private LibraryVersion createVersion(UUID id, UUID libraryId, String version, boolean isLatest) {
-        return new LibraryVersion(id, libraryId, version, isLatest, false, VersionStatus.ACTIVE, "docs", null, null, null);
+    private LibraryVersion createVersion(String id, String libraryId, String version, boolean isLatest) {
+        return new LibraryVersion(id, libraryId, version, isLatest, false, VersionStatus.ACTIVE, "docs", null, 0L, null, null);
     }
 
-    private Document createDocument(UUID id, UUID versionId, String title, String path) {
+    private Document createDocument(String id, String versionId, String title, String path) {
         return new Document(id, versionId, title, path, "# Getting Started\n\nWelcome!",
-                null, "markdown", Map.of(), OffsetDateTime.now(), OffsetDateTime.now());
+                null, "markdown", Map.of(), 0L, OffsetDateTime.now(), OffsetDateTime.now());
     }
 }

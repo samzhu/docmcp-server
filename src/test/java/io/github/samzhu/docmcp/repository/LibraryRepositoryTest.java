@@ -1,5 +1,6 @@
 package io.github.samzhu.docmcp.repository;
 
+import com.github.f4b6a3.tsid.TsidCreator;
 import io.github.samzhu.docmcp.TestcontainersConfiguration;
 import io.github.samzhu.docmcp.domain.enums.SourceType;
 import io.github.samzhu.docmcp.domain.model.Library;
@@ -28,6 +29,13 @@ class LibraryRepositoryTest {
     @Autowired
     private LibraryRepository libraryRepository;
 
+    /**
+     * 產生隨機 ID
+     */
+    private String randomId() {
+        return TsidCreator.getTsid().toString();
+    }
+
     @BeforeEach
     void setUp() {
         libraryRepository.deleteAll();
@@ -41,7 +49,7 @@ class LibraryRepositoryTest {
         var found = libraryRepository.findByName("react");
 
         assertThat(found).isPresent();
-        assertThat(found.get().name()).isEqualTo("react");
+        assertThat(found.get().getName()).isEqualTo("react");
     }
 
     @Test
@@ -63,7 +71,7 @@ class LibraryRepositoryTest {
 
         assertThat(frontendLibraries).hasSize(2);
         assertThat(frontendLibraries)
-                .extracting(Library::name)
+                .extracting(Library::getName)
                 .containsExactlyInAnyOrder("react", "vue");
     }
 
@@ -71,6 +79,7 @@ class LibraryRepositoryTest {
     void shouldSaveAndRetrieveLibrary() {
         // 測試儲存並取得函式庫
         var library = Library.create(
+                randomId(),
                 "spring-boot",
                 "Spring Boot",
                 "Java framework",
@@ -81,10 +90,10 @@ class LibraryRepositoryTest {
         );
 
         var saved = libraryRepository.save(library);
-        var retrieved = libraryRepository.findById(saved.id());
+        var retrieved = libraryRepository.findById(saved.getId());
 
         assertThat(retrieved).isPresent();
-        assertThat(retrieved.get().name()).isEqualTo("spring-boot");
+        assertThat(retrieved.get().getName()).isEqualTo("spring-boot");
     }
 
     /**
@@ -92,7 +101,7 @@ class LibraryRepositoryTest {
      */
     private Library createAndSaveLibrary(String name, String displayName,
                                           SourceType sourceType, String category) {
-        var library = Library.create(name, displayName, null, sourceType, null, category, null);
+        var library = Library.create(randomId(), name, displayName, null, sourceType, null, category, null);
         return libraryRepository.save(library);
     }
 }

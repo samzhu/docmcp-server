@@ -1,5 +1,6 @@
 package io.github.samzhu.docmcp.domain.model;
 
+import com.github.f4b6a3.tsid.TsidCreator;
 import io.github.samzhu.docmcp.domain.enums.SourceType;
 import org.junit.jupiter.api.Test;
 
@@ -12,10 +13,18 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class LibraryTest {
 
+    /**
+     * 產生隨機 ID
+     */
+    private String randomId() {
+        return TsidCreator.getTsid().toString();
+    }
+
     @Test
     void shouldCreateLibraryWithRequiredFields() {
         // 測試使用必要欄位建立函式庫
         var library = Library.create(
+                randomId(),
                 "spring-boot",
                 "Spring Boot",
                 null,
@@ -25,16 +34,17 @@ class LibraryTest {
                 null
         );
 
-        assertThat(library.name()).isEqualTo("spring-boot");
-        assertThat(library.displayName()).isEqualTo("Spring Boot");
-        assertThat(library.sourceType()).isEqualTo(SourceType.GITHUB);
-        assertThat(library.id()).isNull(); // ID 由資料庫產生
+        assertThat(library.getName()).isEqualTo("spring-boot");
+        assertThat(library.getDisplayName()).isEqualTo("Spring Boot");
+        assertThat(library.getSourceType()).isEqualTo(SourceType.GITHUB);
+        assertThat(library.getId()).isNotNull();
     }
 
     @Test
     void shouldCreateLibraryWithAllFields() {
         // 測試使用所有欄位建立函式庫
         var library = Library.create(
+                randomId(),
                 "react",
                 "React",
                 "A JavaScript library for building user interfaces",
@@ -44,10 +54,10 @@ class LibraryTest {
                 List.of("javascript", "ui", "framework")
         );
 
-        assertThat(library.name()).isEqualTo("react");
-        assertThat(library.description()).isEqualTo("A JavaScript library for building user interfaces");
-        assertThat(library.sourceUrl()).isEqualTo("https://github.com/facebook/react");
-        assertThat(library.category()).isEqualTo("frontend");
-        assertThat(library.tags()).containsExactly("javascript", "ui", "framework");
+        assertThat(library.getName()).isEqualTo("react");
+        assertThat(library.getDescription()).isEqualTo("A JavaScript library for building user interfaces");
+        assertThat(library.getSourceUrl()).isEqualTo("https://github.com/facebook/react");
+        assertThat(library.getCategory()).isEqualTo("frontend");
+        assertThat(library.getTags()).containsExactly("javascript", "ui", "framework");
     }
 }

@@ -3,11 +3,11 @@
 
 -- 啟用必要的 PostgreSQL 擴充功能
 CREATE EXTENSION IF NOT EXISTS vector;
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- 建立 libraries 表（函式庫主表）
+-- 使用 VARCHAR(13) 儲存 TSID（時間排序唯一識別碼）
 CREATE TABLE IF NOT EXISTS libraries (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id VARCHAR(13) PRIMARY KEY,
     name VARCHAR(100) NOT NULL UNIQUE,
     display_name VARCHAR(200) NOT NULL,
     description TEXT,
@@ -15,23 +15,26 @@ CREATE TABLE IF NOT EXISTS libraries (
     source_url VARCHAR(500),
     category VARCHAR(50),
     tags TEXT[],
+    version BIGINT DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 COMMENT ON TABLE libraries IS '儲存函式庫/框架的基本資訊';
+COMMENT ON COLUMN libraries.id IS 'TSID 格式（13 字元 Crockford Base32）';
 COMMENT ON COLUMN libraries.source_type IS '來源類型: GITHUB, LOCAL, MANUAL';
 
 -- 建立 library_versions 表（版本資訊表）
 CREATE TABLE IF NOT EXISTS library_versions (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    library_id UUID NOT NULL REFERENCES libraries(id) ON DELETE CASCADE,
+    id VARCHAR(13) PRIMARY KEY,
+    library_id VARCHAR(13) NOT NULL REFERENCES libraries(id) ON DELETE CASCADE,
     version VARCHAR(50) NOT NULL,
     is_latest BOOLEAN DEFAULT FALSE,
     is_lts BOOLEAN DEFAULT FALSE,
     status VARCHAR(20) DEFAULT 'ACTIVE',
     docs_path VARCHAR(500),
     release_date DATE,
+    entity_version BIGINT DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(library_id, version)
@@ -40,13 +43,10 @@ CREATE TABLE IF NOT EXISTS library_versions (
 COMMENT ON TABLE library_versions IS '儲存每個函式庫的版本資訊';
 COMMENT ON COLUMN library_versions.status IS '版本狀態: ACTIVE, DEPRECATED, EOL';
 
--- 遷移：為已存在的 library_versions 表添加 is_lts 欄位（使用 IF NOT EXISTS 語法）
-ALTER TABLE library_versions ADD COLUMN IF NOT EXISTS is_lts BOOLEAN DEFAULT FALSE;
-
 -- 建立 documents 表（文件表）
 CREATE TABLE IF NOT EXISTS documents (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    version_id UUID NOT NULL REFERENCES library_versions(id) ON DELETE CASCADE,
+    id VARCHAR(13) PRIMARY KEY,
+    version_id VARCHAR(13) NOT NULL REFERENCES library_versions(id) ON DELETE CASCADE,
     title VARCHAR(500) NOT NULL,
     path VARCHAR(1000) NOT NULL,
     content TEXT,
@@ -54,6 +54,7 @@ CREATE TABLE IF NOT EXISTS documents (
     doc_type VARCHAR(50),
     metadata JSONB DEFAULT '{}',
     search_vector TSVECTOR,
+    version BIGINT DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(version_id, path)
@@ -64,14 +65,16 @@ COMMENT ON COLUMN documents.search_vector IS '全文檢索向量';
 
 -- 建立 document_chunks 表（文件區塊表，含向量嵌入）
 CREATE TABLE IF NOT EXISTS document_chunks (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    document_id UUID NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+    id VARCHAR(13) PRIMARY KEY,
+    document_id VARCHAR(13) NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
     chunk_index INTEGER NOT NULL,
     content TEXT NOT NULL,
     embedding vector(768),
     token_count INTEGER,
     metadata JSONB DEFAULT '{}',
+    version BIGINT DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(document_id, chunk_index)
 );
 
@@ -80,30 +83,35 @@ COMMENT ON COLUMN document_chunks.embedding IS '768 維度向量，用於語意�
 
 -- 建立 code_examples 表（程式碼範例表）
 CREATE TABLE IF NOT EXISTS code_examples (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    document_id UUID NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+    id VARCHAR(13) PRIMARY KEY,
+    document_id VARCHAR(13) NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
     language VARCHAR(50) NOT NULL,
     code TEXT NOT NULL,
     description TEXT,
     start_line INTEGER,
     end_line INTEGER,
     metadata JSONB DEFAULT '{}',
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    version BIGINT DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 COMMENT ON TABLE code_examples IS '儲存從文件中擷取的程式碼範例';
 
 -- 建立 sync_history 表（同步歷史記錄表）
 CREATE TABLE IF NOT EXISTS sync_history (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    version_id UUID NOT NULL REFERENCES library_versions(id) ON DELETE CASCADE,
+    id VARCHAR(13) PRIMARY KEY,
+    version_id VARCHAR(13) NOT NULL REFERENCES library_versions(id) ON DELETE CASCADE,
     status VARCHAR(20) NOT NULL,
-    started_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    started_at TIMESTAMP WITH TIME ZONE NOT NULL,
     completed_at TIMESTAMP WITH TIME ZONE,
     documents_processed INTEGER DEFAULT 0,
     chunks_created INTEGER DEFAULT 0,
     error_message TEXT,
-    metadata JSONB DEFAULT '{}'
+    metadata JSONB DEFAULT '{}',
+    version BIGINT DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 COMMENT ON TABLE sync_history IS '追蹤文件同步歷史記錄';
@@ -111,7 +119,7 @@ COMMENT ON COLUMN sync_history.status IS '同步狀態: PENDING, RUNNING, SUCCES
 
 -- 建立 api_keys 表（API 金鑰表）
 CREATE TABLE IF NOT EXISTS api_keys (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id VARCHAR(13) PRIMARY KEY,
     name VARCHAR(100) NOT NULL UNIQUE,
     key_hash VARCHAR(255) NOT NULL,
     key_prefix VARCHAR(20) NOT NULL UNIQUE,
@@ -119,7 +127,9 @@ CREATE TABLE IF NOT EXISTS api_keys (
     rate_limit INTEGER DEFAULT 1000,
     expires_at TIMESTAMP WITH TIME ZONE,
     last_used_at TIMESTAMP WITH TIME ZONE,
+    version BIGINT DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     created_by VARCHAR(100)
 );
 

@@ -2,8 +2,6 @@ package io.github.samzhu.docmcp.web.dto;
 
 import io.github.samzhu.docmcp.security.ApiKeyService;
 
-import java.util.UUID;
-
 /**
  * 生成的 API Key 結果 DTO
  * <p>
@@ -16,7 +14,7 @@ import java.util.UUID;
  * @param keyPrefix 金鑰前綴
  */
 public record GeneratedApiKeyDto(
-        UUID id,
+        String id,
         String name,
         String rawKey,
         String keyPrefix

@@ -13,7 +13,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 /**
  * 版本管理服務
@@ -28,11 +27,14 @@ public class VersionService {
 
     private static final Logger log = LoggerFactory.getLogger(VersionService.class);
 
+    private final IdService idService;
     private final LibraryRepository libraryRepository;
     private final LibraryVersionRepository versionRepository;
 
-    public VersionService(LibraryRepository libraryRepository,
+    public VersionService(IdService idService,
+                          LibraryRepository libraryRepository,
                           LibraryVersionRepository versionRepository) {
+        this.idService = idService;
         this.libraryRepository = libraryRepository;
         this.versionRepository = versionRepository;
     }
@@ -47,17 +49,17 @@ public class VersionService {
     public List<LibraryVersion> getVersionsByLibraryName(String libraryName) {
         var library = libraryRepository.findByName(libraryName)
                 .orElseThrow(() -> LibraryNotFoundException.byName(libraryName));
-        return versionRepository.findByLibraryId(library.id());
+        return versionRepository.findByLibraryId(library.getId());
     }
 
     /**
      * 根據函式庫 ID 取得所有版本
      *
-     * @param libraryId 函式庫 ID
+     * @param libraryId 函式庫 ID（TSID 格式）
      * @return 版本列表
      * @throws LibraryNotFoundException 若函式庫不存在
      */
-    public List<LibraryVersion> getVersionsByLibraryId(UUID libraryId) {
+    public List<LibraryVersion> getVersionsByLibraryId(String libraryId) {
         // 確認函式庫存在
         libraryRepository.findById(libraryId)
                 .orElseThrow(() -> LibraryNotFoundException.byId(libraryId));
@@ -67,11 +69,11 @@ public class VersionService {
     /**
      * 根據版本 ID 取得版本
      *
-     * @param versionId 版本 ID
+     * @param versionId 版本 ID（TSID 格式）
      * @return 版本
      * @throws LibraryNotFoundException 若版本不存在
      */
-    public LibraryVersion getVersionById(UUID versionId) {
+    public LibraryVersion getVersionById(String versionId) {
         return versionRepository.findById(versionId)
                 .orElseThrow(() -> new LibraryNotFoundException("版本不存在: " + versionId));
     }
@@ -79,21 +81,21 @@ public class VersionService {
     /**
      * 取得函式庫的最新版本
      *
-     * @param libraryId 函式庫 ID
+     * @param libraryId 函式庫 ID（TSID 格式）
      * @return 最新版本（若存在）
      */
-    public Optional<LibraryVersion> getLatestVersion(UUID libraryId) {
+    public Optional<LibraryVersion> getLatestVersion(String libraryId) {
         return versionRepository.findLatestByLibraryId(libraryId);
     }
 
     /**
      * 取得函式庫的特定版本
      *
-     * @param libraryId 函式庫 ID
+     * @param libraryId 函式庫 ID（TSID 格式）
      * @param version   版本號
      * @return 版本（若存在）
      */
-    public Optional<LibraryVersion> getVersion(UUID libraryId, String version) {
+    public Optional<LibraryVersion> getVersion(String libraryId, String version) {
         return versionRepository.findByLibraryIdAndVersion(libraryId, version);
     }
 
@@ -103,12 +105,12 @@ public class VersionService {
      * 若指定版本號，則返回該版本；否則返回最新版本。
      * </p>
      *
-     * @param libraryId 函式庫 ID
+     * @param libraryId 函式庫 ID（TSID 格式）
      * @param version   版本號（可選，null 表示最新版本）
      * @return 解析後的版本
      * @throws LibraryNotFoundException 若版本不存在
      */
-    public LibraryVersion resolveVersion(UUID libraryId, String version) {
+    public LibraryVersion resolveVersion(String libraryId, String version) {
         if (version != null && !version.isBlank()) {
             return versionRepository.findByLibraryIdAndVersion(libraryId, version)
                     .orElseThrow(() -> new LibraryNotFoundException(
@@ -123,7 +125,7 @@ public class VersionService {
     /**
      * 建立新版本
      *
-     * @param libraryId   函式庫 ID
+     * @param libraryId   函式庫 ID（TSID 格式）
      * @param version     版本號
      * @param docsPath    文件路徑
      * @param releaseDate 發布日期
@@ -133,7 +135,7 @@ public class VersionService {
      * @throws IllegalArgumentException 若版本已存在
      */
     @Transactional
-    public LibraryVersion createVersion(UUID libraryId, String version, String docsPath,
+    public LibraryVersion createVersion(String libraryId, String version, String docsPath,
                                          LocalDate releaseDate, boolean isLatest) {
         // 確認函式庫存在
         libraryRepository.findById(libraryId)
@@ -149,9 +151,12 @@ public class VersionService {
             clearLatestFlag(libraryId);
         }
 
-        // 建立新版本
+        // 使用 IdService 生成 TSID
+        String id = idService.generateId();
+
+        // 建立新版本（entityVersion = null 表示新實體）
         LibraryVersion newVersion = new LibraryVersion(
-                null,
+                id,
                 libraryId,
                 version,
                 isLatest,
@@ -159,6 +164,7 @@ public class VersionService {
                 VersionStatus.ACTIVE,
                 docsPath,
                 releaseDate,
+                null,  // entityVersion = null 表示新實體
                 null,
                 null
         );
@@ -172,7 +178,7 @@ public class VersionService {
     /**
      * 更新版本資訊
      *
-     * @param versionId 版本 ID
+     * @param versionId 版本 ID（TSID 格式）
      * @param docsPath  文件路徑（null 表示不更新）
      * @param status    版本狀態（null 表示不更新）
      * @param isLatest  是否為最新版本（null 表示不更新）
@@ -181,26 +187,27 @@ public class VersionService {
      * @throws LibraryNotFoundException 若版本不存在
      */
     @Transactional
-    public LibraryVersion updateVersion(UUID versionId, String docsPath, VersionStatus status,
+    public LibraryVersion updateVersion(String versionId, String docsPath, VersionStatus status,
                                          Boolean isLatest, Boolean isLts) {
         LibraryVersion existing = getVersionById(versionId);
 
         // 若設為最新版本，需先清除其他版本的 isLatest 標記
-        boolean newIsLatest = isLatest != null ? isLatest : existing.isLatest();
-        if (isLatest != null && isLatest && !existing.isLatest()) {
-            clearLatestFlag(existing.libraryId());
+        boolean newIsLatest = isLatest != null ? isLatest : existing.getIsLatest();
+        if (isLatest != null && isLatest && !existing.getIsLatest()) {
+            clearLatestFlag(existing.getLibraryId());
         }
 
         LibraryVersion updated = new LibraryVersion(
-                existing.id(),
-                existing.libraryId(),
-                existing.version(),
+                existing.getId(),
+                existing.getLibraryId(),
+                existing.getVersion(),
                 newIsLatest,
-                isLts != null ? isLts : existing.isLts(),
-                status != null ? status : existing.status(),
-                docsPath != null ? docsPath : existing.docsPath(),
-                existing.releaseDate(),
-                existing.createdAt(),
+                isLts != null ? isLts : existing.getIsLts(),
+                status != null ? status : existing.getStatus(),
+                docsPath != null ? docsPath : existing.getDocsPath(),
+                existing.getReleaseDate(),
+                existing.getEntityVersion(),  // 保留 entityVersion 以進行樂觀鎖定
+                existing.getCreatedAt(),
                 null
         );
 
@@ -210,41 +217,42 @@ public class VersionService {
     /**
      * 刪除版本
      *
-     * @param versionId 版本 ID
+     * @param versionId 版本 ID（TSID 格式）
      * @throws LibraryNotFoundException 若版本不存在
      */
     @Transactional
-    public void deleteVersion(UUID versionId) {
+    public void deleteVersion(String versionId) {
         LibraryVersion version = getVersionById(versionId);
         versionRepository.delete(version);
-        log.info("刪除版本: {} (id={})", version.version(), versionId);
+        log.info("刪除版本: {} (id={})", version.getVersion(), versionId);
     }
 
     /**
      * 設定最新版本
      *
-     * @param versionId 要設為最新的版本 ID
+     * @param versionId 要設為最新的版本 ID（TSID 格式）
      * @return 更新後的版本
      * @throws LibraryNotFoundException 若版本不存在
      */
     @Transactional
-    public LibraryVersion setLatestVersion(UUID versionId) {
+    public LibraryVersion setLatestVersion(String versionId) {
         LibraryVersion version = getVersionById(versionId);
 
         // 清除同函式庫其他版本的 isLatest 標記
-        clearLatestFlag(version.libraryId());
+        clearLatestFlag(version.getLibraryId());
 
         // 設定此版本為最新
         LibraryVersion updated = new LibraryVersion(
-                version.id(),
-                version.libraryId(),
-                version.version(),
+                version.getId(),
+                version.getLibraryId(),
+                version.getVersion(),
                 true,
-                version.isLts(),
-                version.status(),
-                version.docsPath(),
-                version.releaseDate(),
-                version.createdAt(),
+                version.getIsLts(),
+                version.getStatus(),
+                version.getDocsPath(),
+                version.getReleaseDate(),
+                version.getEntityVersion(),  // 保留 entityVersion 以進行樂觀鎖定
+                version.getCreatedAt(),
                 null
         );
 
@@ -263,10 +271,10 @@ public class VersionService {
     /**
      * 取得函式庫的 LTS 版本
      *
-     * @param libraryId 函式庫 ID
+     * @param libraryId 函式庫 ID（TSID 格式）
      * @return LTS 版本（若存在）
      */
-    public Optional<LibraryVersion> getLtsVersion(UUID libraryId) {
+    public Optional<LibraryVersion> getLtsVersion(String libraryId) {
         return versionRepository.findLtsByLibraryId(libraryId);
     }
 
@@ -289,19 +297,20 @@ public class VersionService {
     /**
      * 清除函式庫所有版本的 isLatest 標記
      */
-    private void clearLatestFlag(UUID libraryId) {
+    private void clearLatestFlag(String libraryId) {
         versionRepository.findLatestByLibraryId(libraryId)
                 .ifPresent(existingLatest -> {
                     LibraryVersion updated = new LibraryVersion(
-                            existingLatest.id(),
-                            existingLatest.libraryId(),
-                            existingLatest.version(),
+                            existingLatest.getId(),
+                            existingLatest.getLibraryId(),
+                            existingLatest.getVersion(),
                             false,
-                            existingLatest.isLts(),
-                            existingLatest.status(),
-                            existingLatest.docsPath(),
-                            existingLatest.releaseDate(),
-                            existingLatest.createdAt(),
+                            existingLatest.getIsLts(),
+                            existingLatest.getStatus(),
+                            existingLatest.getDocsPath(),
+                            existingLatest.getReleaseDate(),
+                            existingLatest.getEntityVersion(),  // 保留 entityVersion 以進行樂觀鎖定
+                            existingLatest.getCreatedAt(),
                             null
                     );
                     versionRepository.save(updated);

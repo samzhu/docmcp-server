@@ -56,12 +56,12 @@ public class ResolveLibraryTool {
         var resolved = libraryService.resolveLibrary(library, version);
 
         return new ResolveLibraryResult(
-                resolved.library().id().toString(),
-                resolved.library().name(),
-                resolved.library().displayName(),
+                resolved.library().getId(),
+                resolved.library().getName(),
+                resolved.library().getDisplayName(),
                 resolved.resolvedVersion(),
-                resolved.version().id().toString(),
-                resolved.version().status().name()
+                resolved.version().getId(),
+                resolved.version().getStatus().name()
         );
     }
 }

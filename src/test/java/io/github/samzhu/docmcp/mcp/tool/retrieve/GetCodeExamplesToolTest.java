@@ -1,5 +1,6 @@
 package io.github.samzhu.docmcp.mcp.tool.retrieve;
 
+import com.github.f4b6a3.tsid.TsidCreator;
 import io.github.samzhu.docmcp.domain.model.CodeExample;
 import io.github.samzhu.docmcp.mcp.dto.GetCodeExamplesResult;
 import io.github.samzhu.docmcp.service.DocumentService;
@@ -10,7 +11,6 @@ import org.junit.jupiter.api.Test;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
@@ -30,12 +30,19 @@ class GetCodeExamplesToolTest {
         getCodeExamplesTool = new GetCodeExamplesTool(documentService);
     }
 
+    /**
+     * 產生隨機 ID
+     */
+    private String randomId() {
+        return TsidCreator.getTsid().toString();
+    }
+
     @Test
     @DisplayName("should return code examples with default parameters")
     void shouldReturnCodeExamplesWithDefaultParameters() {
         // Arrange
-        UUID libraryId = UUID.randomUUID();
-        var example = createCodeExample(UUID.randomUUID(), UUID.randomUUID(), "java",
+        String libraryId = randomId();
+        var example = createCodeExample(randomId(), randomId(), "java",
                 "System.out.println(\"Hello\");", "Hello World example");
 
         when(documentService.getCodeExamples(libraryId, null, null, 10))
@@ -55,9 +62,9 @@ class GetCodeExamplesToolTest {
     @DisplayName("should filter by language")
     void shouldFilterByLanguage() {
         // Arrange
-        UUID libraryId = UUID.randomUUID();
+        String libraryId = randomId();
         String language = "javascript";
-        var example = createCodeExample(UUID.randomUUID(), UUID.randomUUID(), language,
+        var example = createCodeExample(randomId(), randomId(), language,
                 "console.log('Hello');", "JS example");
 
         when(documentService.getCodeExamples(libraryId, null, language, 10))
@@ -76,7 +83,7 @@ class GetCodeExamplesToolTest {
     @DisplayName("should use specified version")
     void shouldUseSpecifiedVersion() {
         // Arrange
-        UUID libraryId = UUID.randomUUID();
+        String libraryId = randomId();
         String version = "2.0.0";
 
         when(documentService.getCodeExamples(libraryId, version, null, 10))
@@ -93,7 +100,7 @@ class GetCodeExamplesToolTest {
     @DisplayName("should use custom limit")
     void shouldUseCustomLimit() {
         // Arrange
-        UUID libraryId = UUID.randomUUID();
+        String libraryId = randomId();
         int limit = 5;
 
         when(documentService.getCodeExamples(libraryId, null, null, limit))
@@ -110,7 +117,7 @@ class GetCodeExamplesToolTest {
     @DisplayName("should use default limit when limit is zero")
     void shouldUseDefaultLimitWhenLimitIsZero() {
         // Arrange
-        UUID libraryId = UUID.randomUUID();
+        String libraryId = randomId();
 
         when(documentService.getCodeExamples(libraryId, null, null, 10))
                 .thenReturn(List.of());
@@ -126,7 +133,7 @@ class GetCodeExamplesToolTest {
     @DisplayName("should use default limit when limit is negative")
     void shouldUseDefaultLimitWhenLimitIsNegative() {
         // Arrange
-        UUID libraryId = UUID.randomUUID();
+        String libraryId = randomId();
 
         when(documentService.getCodeExamples(libraryId, null, null, 10))
                 .thenReturn(List.of());
@@ -142,7 +149,7 @@ class GetCodeExamplesToolTest {
     @DisplayName("should return empty results when no examples found")
     void shouldReturnEmptyResultsWhenNoExamplesFound() {
         // Arrange
-        UUID libraryId = UUID.randomUUID();
+        String libraryId = randomId();
 
         when(documentService.getCodeExamples(libraryId, null, null, 10))
                 .thenReturn(List.of());
@@ -159,9 +166,9 @@ class GetCodeExamplesToolTest {
     @DisplayName("should return multiple examples")
     void shouldReturnMultipleExamples() {
         // Arrange
-        UUID libraryId = UUID.randomUUID();
-        var example1 = createCodeExample(UUID.randomUUID(), UUID.randomUUID(), "java", "code1", "Desc 1");
-        var example2 = createCodeExample(UUID.randomUUID(), UUID.randomUUID(), "java", "code2", "Desc 2");
+        String libraryId = randomId();
+        var example1 = createCodeExample(randomId(), randomId(), "java", "code1", "Desc 1");
+        var example2 = createCodeExample(randomId(), randomId(), "java", "code2", "Desc 2");
 
         when(documentService.getCodeExamples(libraryId, null, null, 10))
                 .thenReturn(List.of(example1, example2));
@@ -175,9 +182,13 @@ class GetCodeExamplesToolTest {
     }
 
     // Helper method
-    private CodeExample createCodeExample(UUID id, UUID documentId, String language,
+    /**
+     * 建立測試用的 CodeExample
+     */
+    private CodeExample createCodeExample(String id, String documentId, String language,
                                            String code, String description) {
+        var now = OffsetDateTime.now();
         return new CodeExample(id, documentId, language, code, description,
-                null, null, Map.of(), OffsetDateTime.now());
+                null, null, Map.of(), null, now, now);
     }
 }

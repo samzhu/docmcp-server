@@ -1,5 +1,6 @@
 package io.github.samzhu.docmcp.mcp.tool.retrieve;
 
+import com.github.f4b6a3.tsid.TsidCreator;
 import io.github.samzhu.docmcp.domain.enums.VersionStatus;
 import io.github.samzhu.docmcp.domain.exception.LibraryNotFoundException;
 import io.github.samzhu.docmcp.domain.model.Document;
@@ -15,7 +16,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -35,6 +35,13 @@ class GetDocTocToolTest {
 
     private GetDocTocTool getDocTocTool;
 
+    /**
+     * 產生隨機 ID
+     */
+    private String randomId() {
+        return TsidCreator.getTsid().toString();
+    }
+
     @BeforeEach
     void setUp() {
         getDocTocTool = new GetDocTocTool(libraryService, documentRepository);
@@ -44,8 +51,8 @@ class GetDocTocToolTest {
     @DisplayName("應回傳文件目錄結構")
     void shouldReturnDocumentToc() {
         // Arrange
-        var libraryId = UUID.randomUUID();
-        var versionId = UUID.randomUUID();
+        var libraryId = randomId();
+        var versionId = randomId();
         var library = createLibrary(libraryId, "spring-boot", "Spring Boot");
         var version = createVersion(versionId, libraryId, "3.2.0", true);
         var resolvedLibrary = new LibraryService.ResolvedLibrary(library, version, "3.2.0");
@@ -64,7 +71,7 @@ class GetDocTocToolTest {
         var result = getDocTocTool.getDocToc("spring-boot", null, null);
 
         // Assert
-        assertThat(result.libraryId()).isEqualTo(libraryId.toString());
+        assertThat(result.libraryId()).isEqualTo(libraryId);
         assertThat(result.libraryName()).isEqualTo("spring-boot");
         assertThat(result.version()).isEqualTo("3.2.0");
         assertThat(result.totalDocs()).isEqualTo(4);
@@ -75,8 +82,8 @@ class GetDocTocToolTest {
     @DisplayName("應支援指定版本查詢目錄")
     void shouldSupportVersionSpecificToc() {
         // Arrange
-        var libraryId = UUID.randomUUID();
-        var versionId = UUID.randomUUID();
+        var libraryId = randomId();
+        var versionId = randomId();
         var library = createLibrary(libraryId, "react", "React");
         var version = createVersion(versionId, libraryId, "17.0.0", false);
         var resolvedLibrary = new LibraryService.ResolvedLibrary(library, version, "17.0.0");
@@ -101,8 +108,8 @@ class GetDocTocToolTest {
     @DisplayName("應限制目錄深度")
     void shouldLimitTocDepth() {
         // Arrange
-        var libraryId = UUID.randomUUID();
-        var versionId = UUID.randomUUID();
+        var libraryId = randomId();
+        var versionId = randomId();
         var library = createLibrary(libraryId, "spring-boot", "Spring Boot");
         var version = createVersion(versionId, libraryId, "3.2.0", true);
         var resolvedLibrary = new LibraryService.ResolvedLibrary(library, version, "3.2.0");
@@ -132,8 +139,8 @@ class GetDocTocToolTest {
     @DisplayName("當沒有文件時應回傳空目錄")
     void shouldReturnEmptyTocWhenNoDocuments() {
         // Arrange
-        var libraryId = UUID.randomUUID();
-        var versionId = UUID.randomUUID();
+        var libraryId = randomId();
+        var versionId = randomId();
         var library = createLibrary(libraryId, "new-lib", "New Library");
         var version = createVersion(versionId, libraryId, "1.0.0", true);
         var resolvedLibrary = new LibraryService.ResolvedLibrary(library, version, "1.0.0");
@@ -161,16 +168,16 @@ class GetDocTocToolTest {
                 .isInstanceOf(LibraryNotFoundException.class);
     }
 
-    private Library createLibrary(UUID id, String name, String displayName) {
-        return new Library(id, name, displayName, null, null, null, null, null, null, null);
+    private Library createLibrary(String id, String name, String displayName) {
+        return new Library(id, name, displayName, null, null, null, null, null, null, null, null);
     }
 
-    private LibraryVersion createVersion(UUID id, UUID libraryId, String version, boolean isLatest) {
-        return new LibraryVersion(id, libraryId, version, isLatest, false, VersionStatus.ACTIVE, null, null, null, null);
+    private LibraryVersion createVersion(String id, String libraryId, String version, boolean isLatest) {
+        return new LibraryVersion(id, libraryId, version, isLatest, false, VersionStatus.ACTIVE, null, null, null, null, null);
     }
 
-    private Document createDocument(UUID versionId, String title, String path) {
-        return new Document(UUID.randomUUID(), versionId, title, path, "content", null, "markdown", null, null, null);
+    private Document createDocument(String versionId, String title, String path) {
+        return new Document(randomId(), versionId, title, path, "content", null, "markdown", null, null, null, null);
     }
 
     /**

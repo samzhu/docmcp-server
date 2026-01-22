@@ -18,7 +18,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.UUID;
 
 /**
  * API Key 管理 REST API
@@ -77,11 +76,11 @@ public class ApiKeyController {
     /**
      * 取得單一 API Key
      *
-     * @param id 金鑰 ID
+     * @param id 金鑰 ID（TSID 格式）
      * @return API Key（不含敏感資訊）
      */
     @GetMapping("/{id}")
-    public ResponseEntity<ApiKeyDto> getKey(@PathVariable UUID id) {
+    public ResponseEntity<ApiKeyDto> getKey(@PathVariable String id) {
         return apiKeyService.getKeyById(id)
                 .map(ApiKeyDto::from)
                 .map(ResponseEntity::ok)
@@ -91,10 +90,10 @@ public class ApiKeyController {
     /**
      * 撤銷 API Key
      *
-     * @param id 金鑰 ID
+     * @param id 金鑰 ID（TSID 格式）
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> revokeKey(@PathVariable UUID id) {
+    public ResponseEntity<Void> revokeKey(@PathVariable String id) {
         apiKeyService.revokeKey(id);
         return ResponseEntity.noContent().build();
     }

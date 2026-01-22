@@ -1,7 +1,6 @@
 package io.github.samzhu.docmcp.web.dto;
 
 import java.util.List;
-import java.util.UUID;
 
 /**
  * 批次同步回應物件
@@ -19,14 +18,14 @@ public record BatchSyncResponse(
     /**
      * 單一同步項目結果
      *
-     * @param versionId     版本 ID
+     * @param versionId     版本 ID（TSID 格式）
      * @param version       版本號
-     * @param syncHistoryId 同步歷史 ID（可用於追蹤同步狀態）
+     * @param syncHistoryId 同步歷史 ID（可用於追蹤同步狀態，TSID 格式）
      */
     public record SyncedItem(
-            UUID versionId,
+            String versionId,
             String version,
-            UUID syncHistoryId
+            String syncHistoryId
     ) {
     }
 

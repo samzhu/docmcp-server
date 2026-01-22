@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.UUID;
 
 /**
  * 搜尋 REST API
@@ -45,7 +44,7 @@ public class SearchApiController {
     @GetMapping
     public SearchResultDto search(
             @RequestParam String query,
-            @RequestParam(required = false) UUID libraryId,
+            @RequestParam(required = false) String libraryId,
             @RequestParam(required = false) String version,
             @RequestParam(defaultValue = "hybrid") String mode,
             @RequestParam(defaultValue = "10") int limit
@@ -55,13 +54,14 @@ public class SearchApiController {
         }
 
         // 如果沒有指定 libraryId，需要從所有函式庫搜尋（目前實作只支援單一函式庫）
-        if (libraryId == null) {
+        // libraryId 現為 String（TSID 格式，13 字元）
+        if (libraryId == null || libraryId.isBlank()) {
             // 取得第一個函式庫作為預設
             var libraries = libraryService.listLibraries(null);
             if (libraries.isEmpty()) {
                 return new SearchResultDto(query, mode, 0, List.of());
             }
-            libraryId = libraries.getFirst().id();
+            libraryId = libraries.getFirst().getId();
         }
 
         List<SearchResultItem> results = switch (mode.toLowerCase()) {

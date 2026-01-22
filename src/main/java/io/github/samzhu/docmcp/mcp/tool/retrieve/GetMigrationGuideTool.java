@@ -14,7 +14,6 @@ import org.springframework.stereotype.Component;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.UUID;
 
 /**
  * get_migration_guide MCP 工具
@@ -68,8 +67,8 @@ public class GetMigrationGuideTool {
                     回傳：遷移相關文件列表，包含升級指南、破壞性變更說明等。
                     """)
     public GetMigrationGuideResult getMigrationGuide(
-            @ToolParam(description = "函式庫 ID（UUID 格式）")
-            UUID libraryId,
+            @ToolParam(description = "函式庫 ID（TSID 格式）")
+            String libraryId,
             @ToolParam(description = "來源版本（目前使用的版本）")
             String fromVersion,
             @ToolParam(description = "目標版本（預計升級到的版本）")
@@ -110,17 +109,17 @@ public class GetMigrationGuideTool {
 
         for (LibraryVersion version : versions) {
             // 搜尋此版本的遷移相關文件
-            List<Document> documents = documentRepository.findByVersionId(version.id());
+            List<Document> documents = documentRepository.findByVersionId(version.getId());
 
             for (Document doc : documents) {
                 String relevance = detectMigrationRelevance(doc);
                 if (relevance != null) {
                     guides.add(new MigrationGuideItem(
-                            doc.id(),
-                            doc.title(),
-                            doc.path(),
-                            version.version(),
-                            truncateContent(doc.content(), 300),
+                            doc.getId(),
+                            doc.getTitle(),
+                            doc.getPath(),
+                            version.getVersion(),
+                            truncateContent(doc.getContent(), 300),
                             relevance
                     ));
                 }
@@ -139,9 +138,9 @@ public class GetMigrationGuideTool {
      * 檢測文件是否與遷移相關
      */
     private String detectMigrationRelevance(Document doc) {
-        String title = doc.title().toLowerCase();
-        String path = doc.path().toLowerCase();
-        String content = doc.content() != null ? doc.content().toLowerCase() : "";
+        String title = doc.getTitle().toLowerCase();
+        String path = doc.getPath().toLowerCase();
+        String content = doc.getContent() != null ? doc.getContent().toLowerCase() : "";
 
         // 檢查標題和路徑
         for (String keyword : MIGRATION_KEYWORDS) {

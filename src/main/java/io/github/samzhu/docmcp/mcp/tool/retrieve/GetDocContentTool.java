@@ -10,7 +10,6 @@ import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
-import java.util.UUID;
 
 /**
  * get_doc_content MCP 工具
@@ -51,8 +50,8 @@ public class GetDocContentTool {
                     回傳：文件完整內容，包含標題、路徑、內容及程式碼範例。
                     """)
     public GetDocContentResult getDocContent(
-            @ToolParam(description = "文件 ID（UUID 格式，從搜尋結果取得）")
-            UUID documentId,
+            @ToolParam(description = "文件 ID（TSID 格式，從搜尋結果取得）")
+            String documentId,
             @ToolParam(description = "是否包含程式碼範例，預設 true", required = false)
             Boolean includeCodeExamples
     ) {
@@ -63,9 +62,9 @@ public class GetDocContentTool {
         // 轉換為 DTO
         var chunkDtos = content.chunks().stream()
                 .map(chunk -> new DocumentContentDto.ChunkDto(
-                        chunk.id(),
-                        chunk.chunkIndex(),
-                        chunk.content()
+                        chunk.getId(),
+                        chunk.getChunkIndex(),
+                        chunk.getContent()
                 ))
                 .toList();
 

@@ -25,6 +25,12 @@ ext {
 }
 
 dependencies {
+	// Lombok - 減少樣板代碼
+	compileOnly 'org.projectlombok:lombok'
+	annotationProcessor 'org.projectlombok:lombok'
+	testCompileOnly 'org.projectlombok:lombok'
+	testAnnotationProcessor 'org.projectlombok:lombok'
+
 	implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation 'org.springframework.boot:spring-boot-starter-data-jdbc'
@@ -37,6 +43,8 @@ dependencies {
 	implementation "org.htmlunit:htmlunit:4.21.0"
 	implementation "com.vladsch.flexmark:flexmark:0.64.8"
 	implementation "com.vladsch.flexmark:flexmark-html2md-converter:0.64.8"
+	// TSID 生成器（取代 UUID，具有時間排序特性）
+	implementation "com.github.f4b6a3:tsid-creator:5.2.6"
 	implementation "org.asciidoctor:asciidoctorj:3.0.1" // https://central.sonatype.com/artifact/org.asciidoctor/asciidoctorj
 	// Apache Commons Compress for tar.gz extraction
 	implementation "org.apache.commons:commons-compress:1.28.0" // https://central.sonatype.com/artifact/org.apache.commons/commons-compress

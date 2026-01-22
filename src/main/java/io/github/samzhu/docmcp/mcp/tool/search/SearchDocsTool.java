@@ -6,8 +6,6 @@ import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Component;
 
-import java.util.UUID;
-
 /**
  * search_docs MCP 工具
  * <p>
@@ -54,8 +52,8 @@ public class SearchDocsTool {
                     回傳：匹配的文件列表，包含標題、路徑和內容摘要。
                     """)
     public SearchDocsResult searchDocs(
-            @ToolParam(description = "函式庫 ID（UUID 格式）")
-            UUID libraryId,
+            @ToolParam(description = "函式庫 ID（TSID 格式）")
+            String libraryId,
             @ToolParam(description = "搜尋關鍵字")
             String query,
             @ToolParam(description = "版本，預設為最新版", required = false)

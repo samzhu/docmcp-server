@@ -1,5 +1,6 @@
 package io.github.samzhu.docmcp.mcp.tool.retrieve;
 
+import com.github.f4b6a3.tsid.TsidCreator;
 import io.github.samzhu.docmcp.domain.exception.DocumentNotFoundException;
 import io.github.samzhu.docmcp.domain.model.CodeExample;
 import io.github.samzhu.docmcp.domain.model.Document;
@@ -13,7 +14,6 @@ import org.junit.jupiter.api.Test;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -35,14 +35,21 @@ class GetDocContentToolTest {
         getDocContentTool = new GetDocContentTool(documentService);
     }
 
+    /**
+     * 產生隨機 ID
+     */
+    private String randomId() {
+        return TsidCreator.getTsid().toString();
+    }
+
     @Test
     @DisplayName("should return document content with code examples by default")
     void shouldReturnDocumentContentWithCodeExamplesByDefault() {
         // Arrange
-        UUID documentId = UUID.randomUUID();
+        String documentId = randomId();
         var document = createDocument(documentId, "Test Doc", "/docs/test.md", "Content");
-        var chunk = createChunk(UUID.randomUUID(), documentId, 0, "Chunk content");
-        var example = createCodeExample(UUID.randomUUID(), documentId, "java", "System.out.println();");
+        var chunk = createChunk(randomId(), documentId, 0, "Chunk content");
+        var example = createCodeExample(randomId(), documentId, "java", "System.out.println();");
 
         var content = new DocumentService.DocumentContent(document, List.of(chunk), List.of(example));
         when(documentService.getDocumentContent(documentId)).thenReturn(content);
@@ -61,9 +68,9 @@ class GetDocContentToolTest {
     @DisplayName("should return document content with code examples when includeCodeExamples is true")
     void shouldReturnDocumentContentWithCodeExamplesWhenTrue() {
         // Arrange
-        UUID documentId = UUID.randomUUID();
+        String documentId = randomId();
         var document = createDocument(documentId, "Test Doc", "/docs/test.md", "Content");
-        var example = createCodeExample(UUID.randomUUID(), documentId, "java", "code");
+        var example = createCodeExample(randomId(), documentId, "java", "code");
 
         var content = new DocumentService.DocumentContent(document, List.of(), List.of(example));
         when(documentService.getDocumentContent(documentId)).thenReturn(content);
@@ -79,9 +86,9 @@ class GetDocContentToolTest {
     @DisplayName("should return document content without code examples when includeCodeExamples is false")
     void shouldReturnDocumentContentWithoutCodeExamplesWhenFalse() {
         // Arrange
-        UUID documentId = UUID.randomUUID();
+        String documentId = randomId();
         var document = createDocument(documentId, "Test Doc", "/docs/test.md", "Content");
-        var example = createCodeExample(UUID.randomUUID(), documentId, "java", "code");
+        var example = createCodeExample(randomId(), documentId, "java", "code");
 
         var content = new DocumentService.DocumentContent(document, List.of(), List.of(example));
         when(documentService.getDocumentContent(documentId)).thenReturn(content);
@@ -97,7 +104,7 @@ class GetDocContentToolTest {
     @DisplayName("should throw exception when document not found")
     void shouldThrowExceptionWhenDocumentNotFound() {
         // Arrange
-        UUID documentId = UUID.randomUUID();
+        String documentId = randomId();
         when(documentService.getDocumentContent(documentId))
                 .thenThrow(DocumentNotFoundException.byId(documentId));
 
@@ -107,17 +114,28 @@ class GetDocContentToolTest {
     }
 
     // Helper methods
-    private Document createDocument(UUID id, String title, String path, String content) {
-        return new Document(id, UUID.randomUUID(), title, path, content, "hash",
-                "markdown", Map.of(), OffsetDateTime.now(), OffsetDateTime.now());
+    /**
+     * 建立測試用的 Document
+     */
+    private Document createDocument(String id, String title, String path, String content) {
+        return new Document(id, randomId(), title, path, content, "hash",
+                "markdown", Map.of(), null, OffsetDateTime.now(), OffsetDateTime.now());
     }
 
-    private DocumentChunk createChunk(UUID id, UUID documentId, int index, String content) {
-        return new DocumentChunk(id, documentId, index, content, null, 100, Map.of(), OffsetDateTime.now());
+    /**
+     * 建立測試用的 DocumentChunk
+     */
+    private DocumentChunk createChunk(String id, String documentId, int index, String content) {
+        var now = OffsetDateTime.now();
+        return new DocumentChunk(id, documentId, index, content, null, 100, Map.of(), null, now, now);
     }
 
-    private CodeExample createCodeExample(UUID id, UUID documentId, String language, String code) {
+    /**
+     * 建立測試用的 CodeExample
+     */
+    private CodeExample createCodeExample(String id, String documentId, String language, String code) {
+        var now = OffsetDateTime.now();
         return new CodeExample(id, documentId, language, code, "Description",
-                null, null, Map.of(), OffsetDateTime.now());
+                null, null, Map.of(), null, now, now);
     }
 }

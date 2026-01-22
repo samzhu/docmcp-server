@@ -10,9 +10,9 @@
         <nav class="breadcrumb">
             <a th:href="@{/libraries}">Libraries</a>
             <span class="breadcrumb-separator">/</span>
-            <a th:href="@{/libraries/{id}(id=${library.id()})}" th:text="${library.displayName()}">Library</a>
+            <a th:href="@{/libraries/{id}(id=${library.id})}" th:text="${library.displayName}">Library</a>
             <span class="breadcrumb-separator">/</span>
-            <span class="breadcrumb-current" th:text="${version.version()}">1.0.0</span>
+            <span class="breadcrumb-current" th:text="${version.version}">1.0.0</span>
         </nav>
 
         <!-- 頁首 -->
@@ -20,11 +20,11 @@
             <div>
                 <h2 class="text-2xl font-bold text-primary">Documents</h2>
                 <p class="text-sm text-secondary mt-1">
-                    <span th:text="${library.displayName()}">Library</span>
+                    <span th:text="${library.displayName}">Library</span>
                     <span class="mx-2">&middot;</span>
-                    <span th:text="${version.version()}" class="font-mono">1.0.0</span>
-                    <span th:if="${version.isLatest()}" class="ml-2 badge badge-success">Latest</span>
-                    <span th:if="${version.isLts()}" class="ml-2 badge badge-info">LTS</span>
+                    <span th:text="${version.version}" class="font-mono">1.0.0</span>
+                    <span th:if="${version.isLatest}" class="ml-2 badge badge-success">Latest</span>
+                    <span th:if="${version.isLts}" class="ml-2 badge badge-info">LTS</span>
                 </p>
             </div>
         </div>
@@ -38,7 +38,7 @@
                 </svg>
                 <p class="text-lg font-medium">No documents yet</p>
                 <p class="text-sm mt-2">Sync this version to import documents</p>
-                <a th:href="@{/libraries/{id}(id=${library.id()})}" class="btn btn-primary mt-4">Go to Library</a>
+                <a th:href="@{/libraries/{id}(id=${library.id})}" class="btn btn-primary mt-4">Go to Library</a>
             </div>
         </div>
 
@@ -56,16 +56,16 @@
                 <tbody>
                     <tr th:each="doc : ${documents}">
                         <td>
-                            <a th:href="@{/documents/{id}(id=${doc.id()})}"
-                               th:text="${doc.title()}"
+                            <a th:href="@{/documents/{id}(id=${doc.id})}"
+                               th:text="${doc.title}"
                                class="text-accent font-medium">Document Title</a>
                         </td>
-                        <td class="font-mono text-sm text-secondary" th:text="${doc.path()}">docs/getting-started.md</td>
+                        <td class="font-mono text-sm text-secondary" th:text="${doc.path}">docs/getting-started.md</td>
                         <td>
-                            <span class="badge badge-secondary" th:text="${doc.docType()} ?: 'unknown'">markdown</span>
+                            <span class="badge badge-secondary" th:text="${doc.docType} ?: 'unknown'">markdown</span>
                         </td>
                         <td>
-                            <a th:href="@{/documents/{id}(id=${doc.id()})}"
+                            <a th:href="@{/documents/{id}(id=${doc.id})}"
                                class="text-sm text-accent">View</a>
                         </td>
                     </tr>

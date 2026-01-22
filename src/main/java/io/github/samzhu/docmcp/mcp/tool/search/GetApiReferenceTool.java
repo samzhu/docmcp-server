@@ -65,8 +65,8 @@ public class GetApiReferenceTool {
 
         // 使用全文搜尋查找 API 參考
         var searchResults = searchService.fullTextSearch(
-                library.id(),
-                libraryVersion.version(),
+                library.getId(),
+                libraryVersion.getVersion(),
                 apiName,
                 DEFAULT_LIMIT
         );
@@ -83,9 +83,9 @@ public class GetApiReferenceTool {
                 .toList();
 
         return new GetApiReferenceResult(
-                library.id().toString(),
-                library.name(),
-                libraryVersion.version(),
+                library.getId(),
+                library.getName(),
+                libraryVersion.getVersion(),
                 apiName,
                 !results.isEmpty(),
                 results

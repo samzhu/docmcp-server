@@ -1,12 +1,12 @@
 package io.github.samzhu.docmcp.infrastructure.vectorstore;
 
 import io.github.samzhu.docmcp.domain.model.DocumentChunk;
+import io.github.samzhu.docmcp.service.IdService;
 import org.springframework.ai.document.Document;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 
 import static io.github.samzhu.docmcp.infrastructure.vectorstore.DocumentChunkVectorStore.*;
 
@@ -28,6 +28,17 @@ import static io.github.samzhu.docmcp.infrastructure.vectorstore.DocumentChunkVe
 @Component
 public class DocumentChunkConverter {
 
+    private final IdService idService;
+
+    /**
+     * 建構子
+     *
+     * @param idService ID 生成服務（用於生成 TSID）
+     */
+    public DocumentChunkConverter(IdService idService) {
+        this.idService = idService;
+    }
+
     /**
      * 將 DocumentChunk 轉換為 Spring AI Document
      * <p>
@@ -37,49 +48,50 @@ public class DocumentChunkConverter {
      *
      * @param chunk     文件區塊實體
      * @param doc       所屬文件（用於取得標題和路徑）
-     * @param versionId 版本 ID
+     * @param versionId 版本 ID（TSID 格式字串）
      * @return Spring AI Document 物件
      */
     public Document toSpringAiDocument(
             DocumentChunk chunk,
             io.github.samzhu.docmcp.domain.model.Document doc,
-            UUID versionId) {
+            String versionId) {
 
         // 建構 metadata，包含所有相關資訊
         Map<String, Object> metadata = new HashMap<>();
 
         // 必要的索引欄位（用於 filter）
-        metadata.put(METADATA_VERSION_ID, versionId.toString());
-        metadata.put(METADATA_DOCUMENT_ID, chunk.documentId().toString());
-        metadata.put(METADATA_CHUNK_INDEX, chunk.chunkIndex());
+        metadata.put(METADATA_VERSION_ID, versionId);
+        metadata.put(METADATA_DOCUMENT_ID, chunk.getDocumentId());
+        metadata.put(METADATA_CHUNK_INDEX, chunk.getChunkIndex());
 
         // 可選的輔助欄位
-        if (chunk.tokenCount() != null) {
-            metadata.put(METADATA_TOKEN_COUNT, chunk.tokenCount());
+        if (chunk.getTokenCount() != null) {
+            metadata.put(METADATA_TOKEN_COUNT, chunk.getTokenCount());
         }
 
         // 從文件取得標題和路徑（如果有的話）
         if (doc != null) {
-            if (doc.title() != null) {
-                metadata.put(METADATA_DOCUMENT_TITLE, doc.title());
+            if (doc.getTitle() != null) {
+                metadata.put(METADATA_DOCUMENT_TITLE, doc.getTitle());
             }
-            if (doc.path() != null) {
-                metadata.put(METADATA_DOCUMENT_PATH, doc.path());
+            if (doc.getPath() != null) {
+                metadata.put(METADATA_DOCUMENT_PATH, doc.getPath());
             }
         }
 
         // 合併原有的 metadata（如果有）
-        if (chunk.metadata() != null && !chunk.metadata().isEmpty()) {
-            for (Map.Entry<String, Object> entry : chunk.metadata().entrySet()) {
+        if (chunk.getMetadata() != null && !chunk.getMetadata().isEmpty()) {
+            for (Map.Entry<String, Object> entry : chunk.getMetadata().entrySet()) {
                 // 不覆蓋上面設定的標準欄位
                 metadata.putIfAbsent(entry.getKey(), entry.getValue());
             }
         }
 
         // Spring AI 2.0 的 Document 不再儲存 embedding
+        // 若 chunk.getId() 為 null，使用 IdService 生成新的 TSID
         return new Document(
-                chunk.id() != null ? chunk.id().toString() : UUID.randomUUID().toString(),
-                chunk.content(),
+                chunk.getId() != null ? chunk.getId() : idService.generateId(),
+                chunk.getContent(),
                 metadata
         );
     }
@@ -88,10 +100,10 @@ public class DocumentChunkConverter {
      * 將 DocumentChunk 轉換為 Spring AI Document（簡化版本，不含 Document 資訊）
      *
      * @param chunk     文件區塊實體
-     * @param versionId 版本 ID
+     * @param versionId 版本 ID（TSID 格式字串）
      * @return Spring AI Document 物件
      */
-    public Document toSpringAiDocument(DocumentChunk chunk, UUID versionId) {
+    public Document toSpringAiDocument(DocumentChunk chunk, String versionId) {
         return toSpringAiDocument(chunk, null, versionId);
     }
 
@@ -112,9 +124,9 @@ public class DocumentChunkConverter {
     public DocumentChunk fromSpringAiDocument(Document doc) {
         Map<String, Object> metadata = doc.getMetadata();
 
-        // 從 metadata 解析 UUID 欄位
-        UUID id = parseUuid(doc.getId(), null);
-        UUID documentId = parseUuid(getMetadataString(metadata, METADATA_DOCUMENT_ID), null);
+        // 從 metadata 解析 ID 欄位（TSID 字串格式）
+        String id = doc.getId();
+        String documentId = getMetadataString(metadata, METADATA_DOCUMENT_ID);
 
         // 從 metadata 解析其他欄位
         int chunkIndex = getMetadataInt(metadata, METADATA_CHUNK_INDEX, 0);
@@ -139,6 +151,7 @@ public class DocumentChunkConverter {
         }
 
         // Spring AI 2.0 Document 不包含 embedding，所以設為 null
+        // version = null 表示新實體，執行 INSERT
         return new DocumentChunk(
                 id,
                 documentId,
@@ -147,7 +160,9 @@ public class DocumentChunkConverter {
                 null,  // embedding 由 VectorStore 管理
                 tokenCount,
                 chunkMetadata,
-                null  // createdAt 由資料庫自動產生
+                null,  // version = null 表示新實體
+                null,  // createdAt 由資料庫自動產生
+                null   // updatedAt 由資料庫自動產生
         );
     }
 
@@ -157,15 +172,15 @@ public class DocumentChunkConverter {
      * 用於同步時建立新的文件區塊。此方法會設定 ID。
      * </p>
      *
-     * @param versionId  版本 ID
-     * @param documentId 文件 ID
+     * @param versionId  版本 ID（TSID 格式字串）
+     * @param documentId 文件 ID（TSID 格式字串）
      * @param chunkIndex 區塊索引
      * @param content    區塊內容
      * @param tokenCount token 數量
      * @return Spring AI Document 物件（不含 embedding，由 VectorStore 自動生成）
      */
     public Document createNewChunkDocument(
-            UUID versionId, UUID documentId, int chunkIndex, String content, int tokenCount) {
+            String versionId, String documentId, int chunkIndex, String content, int tokenCount) {
 
         return createNewChunkDocument(versionId, documentId, chunkIndex, content, tokenCount, null, null);
     }
@@ -173,8 +188,8 @@ public class DocumentChunkConverter {
     /**
      * 建立新文件區塊的 Spring AI Document（完整版本）
      *
-     * @param versionId     版本 ID
-     * @param documentId    文件 ID
+     * @param versionId     版本 ID（TSID 格式字串）
+     * @param documentId    文件 ID（TSID 格式字串）
      * @param chunkIndex    區塊索引
      * @param content       區塊內容
      * @param tokenCount    token 數量
@@ -183,12 +198,12 @@ public class DocumentChunkConverter {
      * @return Spring AI Document 物件
      */
     public Document createNewChunkDocument(
-            UUID versionId, UUID documentId, int chunkIndex, String content, int tokenCount,
+            String versionId, String documentId, int chunkIndex, String content, int tokenCount,
             String documentTitle, String documentPath) {
 
         Map<String, Object> metadata = new HashMap<>();
-        metadata.put(METADATA_VERSION_ID, versionId.toString());
-        metadata.put(METADATA_DOCUMENT_ID, documentId.toString());
+        metadata.put(METADATA_VERSION_ID, versionId);
+        metadata.put(METADATA_DOCUMENT_ID, documentId);
         metadata.put(METADATA_CHUNK_INDEX, chunkIndex);
         metadata.put(METADATA_TOKEN_COUNT, tokenCount);
 
@@ -199,8 +214,8 @@ public class DocumentChunkConverter {
             metadata.put(METADATA_DOCUMENT_PATH, documentPath);
         }
 
-        // Spring AI 2.0 使用 3 參數建構子
-        return new Document(UUID.randomUUID().toString(), content, metadata);
+        // Spring AI 2.0 使用 3 參數建構子，使用 IdService 生成 TSID
+        return new Document(idService.generateId(), content, metadata);
     }
 
     // ========== 私有輔助方法 ==========
@@ -234,17 +249,4 @@ public class DocumentChunkConverter {
         }
     }
 
-    /**
-     * 解析 UUID 字串
-     */
-    private UUID parseUuid(String str, UUID defaultValue) {
-        if (str == null || str.isBlank()) {
-            return defaultValue;
-        }
-        try {
-            return UUID.fromString(str);
-        } catch (IllegalArgumentException e) {
-            return defaultValue;
-        }
-    }
 }

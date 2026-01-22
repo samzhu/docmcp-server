@@ -34,14 +34,14 @@ public record SyncHistoryDto(
      */
     public static SyncHistoryDto from(SyncHistory syncHistory) {
         return new SyncHistoryDto(
-                syncHistory.id() != null ? syncHistory.id().toString() : null,
-                syncHistory.versionId() != null ? syncHistory.versionId().toString() : null,
-                syncHistory.status() != null ? syncHistory.status().name() : null,
-                syncHistory.startedAt(),
-                syncHistory.completedAt(),
-                syncHistory.documentsProcessed(),
-                syncHistory.chunksCreated(),
-                syncHistory.errorMessage()
+                syncHistory.getId(),
+                syncHistory.getVersionId(),
+                syncHistory.getStatus() != null ? syncHistory.getStatus().name() : null,
+                syncHistory.getStartedAt(),
+                syncHistory.getCompletedAt(),
+                syncHistory.getDocumentsProcessed(),
+                syncHistory.getChunksCreated(),
+                syncHistory.getErrorMessage()
         );
     }
 }

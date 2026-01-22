@@ -1,6 +1,7 @@
 package io.github.samzhu.docmcp.web.api;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.f4b6a3.tsid.TsidCreator;
 import io.github.samzhu.docmcp.TestConfig;
 import io.github.samzhu.docmcp.TestcontainersConfiguration;
 import io.github.samzhu.docmcp.domain.enums.ApiKeyStatus;
@@ -23,7 +24,6 @@ import org.springframework.web.context.WebApplicationContext;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -54,6 +54,13 @@ class ApiKeyControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+    /**
+     * 產生隨機 ID
+     */
+    private String randomId() {
+        return TsidCreator.getTsid().toString();
+    }
+
     @BeforeEach
     void setUp() {
         mockMvc = MockMvcBuilders
@@ -70,7 +77,7 @@ class ApiKeyControllerTest {
     void shouldCreateApiKey() throws Exception {
         var request = new CreateApiKeyRequest("test-key", null, 1000);
         var generated = new ApiKeyService.GeneratedApiKey(
-                UUID.randomUUID(),
+                randomId(),
                 "test-key",
                 "dmcp_abcdefgh12345678901234567890",
                 "dmcp_abcdefg"
@@ -93,8 +100,8 @@ class ApiKeyControllerTest {
     @WithMockUser(roles = "API_KEY")
     void shouldListApiKeys() throws Exception {
         var keys = List.of(
-                createApiKey(UUID.randomUUID(), "key-1", "dmcp_key11234"),
-                createApiKey(UUID.randomUUID(), "key-2", "dmcp_key22345")
+                createApiKey(randomId(), "key-1", "dmcp_key11234"),
+                createApiKey(randomId(), "key-2", "dmcp_key22345")
         );
 
         when(apiKeyService.listKeys()).thenReturn(keys);
@@ -109,7 +116,7 @@ class ApiKeyControllerTest {
     @Test
     @WithMockUser(roles = "API_KEY")
     void shouldGetApiKeyById() throws Exception {
-        var id = UUID.randomUUID();
+        var id = randomId();
         var apiKey = createApiKey(id, "test-key", "dmcp_test1234");
 
         when(apiKeyService.getKeyById(id)).thenReturn(Optional.of(apiKey));
@@ -123,7 +130,7 @@ class ApiKeyControllerTest {
     @Test
     @WithMockUser(roles = "API_KEY")
     void shouldReturn404WhenApiKeyNotFound() throws Exception {
-        var id = UUID.randomUUID();
+        var id = randomId();
 
         when(apiKeyService.getKeyById(id)).thenReturn(Optional.empty());
 
@@ -134,7 +141,7 @@ class ApiKeyControllerTest {
     @Test
     @WithMockUser(roles = "API_KEY")
     void shouldRevokeApiKey() throws Exception {
-        var id = UUID.randomUUID();
+        var id = randomId();
 
         doNothing().when(apiKeyService).revokeKey(id);
 
@@ -157,7 +164,8 @@ class ApiKeyControllerTest {
                 .andExpect(status().isBadRequest());
     }
 
-    private ApiKey createApiKey(UUID id, String name, String keyPrefix) {
+    private ApiKey createApiKey(String id, String name, String keyPrefix) {
+        var now = OffsetDateTime.now();
         return new ApiKey(
                 id,
                 name,
@@ -167,8 +175,10 @@ class ApiKeyControllerTest {
                 1000,
                 null,
                 null,
-                OffsetDateTime.now(),
-                "system"
+                "system",
+                0L,         // version（模擬從資料庫讀取）
+                now,        // createdAt
+                now         // updatedAt
         );
     }
 }

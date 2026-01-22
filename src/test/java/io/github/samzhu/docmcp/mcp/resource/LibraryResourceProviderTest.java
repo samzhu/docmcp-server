@@ -16,7 +16,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
-import java.util.UUID;
+
+import com.github.f4b6a3.tsid.TsidCreator;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -44,8 +45,8 @@ class LibraryResourceProviderTest {
     @DisplayName("應回傳函式庫元資料")
     void shouldReturnLibraryMetadata() {
         // Arrange
-        var libraryId = UUID.randomUUID();
-        var versionId = UUID.randomUUID();
+        var libraryId = randomId();
+        var versionId = randomId();
         var library = createLibrary(libraryId, "spring-boot", "Spring Boot",
                 "Spring Boot Framework", SourceType.GITHUB, "https://github.com/spring-projects/spring-boot");
         var versions = List.of(
@@ -56,7 +57,7 @@ class LibraryResourceProviderTest {
         when(libraryService.getLibraryVersionsById(libraryId)).thenReturn(versions);
 
         // Act
-        var result = libraryResourceProvider.getLibraryResource(libraryId.toString());
+        var result = libraryResourceProvider.getLibraryResource(libraryId);
 
         // Assert
         assertThat(result.contents()).hasSize(1);
@@ -72,8 +73,8 @@ class LibraryResourceProviderTest {
     @DisplayName("應透過名稱回傳函式庫元資料")
     void shouldReturnLibraryMetadataByName() {
         // Arrange
-        var libraryId = UUID.randomUUID();
-        var versionId = UUID.randomUUID();
+        var libraryId = randomId();
+        var versionId = randomId();
         var library = createLibrary(libraryId, "react", "React",
                 "React Framework", SourceType.GITHUB, "https://github.com/facebook/react");
         var version = createVersion(versionId, libraryId, "18.2.0", true, VersionStatus.ACTIVE);
@@ -97,19 +98,19 @@ class LibraryResourceProviderTest {
     @DisplayName("應包含所有版本資訊")
     void shouldIncludeAllVersions() {
         // Arrange
-        var libraryId = UUID.randomUUID();
+        var libraryId = randomId();
         var library = createLibrary(libraryId, "spring-boot", "Spring Boot", null, null, null);
         var versions = List.of(
-                createVersion(UUID.randomUUID(), libraryId, "3.2.0", true, VersionStatus.ACTIVE),
-                createVersion(UUID.randomUUID(), libraryId, "3.1.0", false, VersionStatus.ACTIVE),
-                createVersion(UUID.randomUUID(), libraryId, "2.7.0", false, VersionStatus.DEPRECATED)
+                createVersion(randomId(), libraryId, "3.2.0", true, VersionStatus.ACTIVE),
+                createVersion(randomId(), libraryId, "3.1.0", false, VersionStatus.ACTIVE),
+                createVersion(randomId(), libraryId, "2.7.0", false, VersionStatus.DEPRECATED)
         );
 
         when(libraryService.getLibraryById(libraryId)).thenReturn(library);
         when(libraryService.getLibraryVersionsById(libraryId)).thenReturn(versions);
 
         // Act
-        var result = libraryResourceProvider.getLibraryResource(libraryId.toString());
+        var result = libraryResourceProvider.getLibraryResource(libraryId);
 
         // Assert
         var resourceContent = (TextResourceContents) result.contents().get(0);
@@ -124,23 +125,28 @@ class LibraryResourceProviderTest {
     @DisplayName("當函式庫不存在時應拋出例外")
     void shouldThrowExceptionWhenLibraryNotFound() {
         // Arrange
-        var libraryId = UUID.randomUUID();
+        var libraryId = randomId();
         when(libraryService.getLibraryById(libraryId))
                 .thenThrow(LibraryNotFoundException.byId(libraryId));
 
         // Act & Assert
-        assertThatThrownBy(() -> libraryResourceProvider.getLibraryResource(libraryId.toString()))
+        assertThatThrownBy(() -> libraryResourceProvider.getLibraryResource(libraryId))
                 .isInstanceOf(LibraryNotFoundException.class);
     }
 
-    private Library createLibrary(UUID id, String name, String displayName,
-                                   String description, SourceType sourceType, String sourceUrl) {
-        return new Library(id, name, displayName, description, sourceType, sourceUrl,
-                "backend", List.of("java", "framework"), null, null);
+    // 產生隨機 ID 的輔助方法
+    private String randomId() {
+        return TsidCreator.getTsid().toString();
     }
 
-    private LibraryVersion createVersion(UUID id, UUID libraryId, String version,
+    private Library createLibrary(String id, String name, String displayName,
+                                   String description, SourceType sourceType, String sourceUrl) {
+        return new Library(id, name, displayName, description, sourceType, sourceUrl,
+                "backend", List.of("java", "framework"), 0L, null, null);
+    }
+
+    private LibraryVersion createVersion(String id, String libraryId, String version,
                                           boolean isLatest, VersionStatus status) {
-        return new LibraryVersion(id, libraryId, version, isLatest, false, status, null, null, null, null);
+        return new LibraryVersion(id, libraryId, version, isLatest, false, status, null, null, 0L, null, null);
     }
 }

@@ -4,7 +4,6 @@ import io.github.samzhu.docmcp.domain.enums.ApiKeyStatus;
 import io.github.samzhu.docmcp.domain.model.ApiKey;
 
 import java.time.OffsetDateTime;
-import java.util.UUID;
 
 /**
  * API Key 資料傳輸物件
@@ -23,7 +22,7 @@ import java.util.UUID;
  * @param createdBy  建立者
  */
 public record ApiKeyDto(
-        UUID id,
+        String id,
         String name,
         String keyPrefix,
         ApiKeyStatus status,
@@ -38,15 +37,15 @@ public record ApiKeyDto(
      */
     public static ApiKeyDto from(ApiKey apiKey) {
         return new ApiKeyDto(
-                apiKey.id(),
-                apiKey.name(),
-                apiKey.keyPrefix(),
-                apiKey.status(),
-                apiKey.rateLimit(),
-                apiKey.expiresAt(),
-                apiKey.lastUsedAt(),
-                apiKey.createdAt(),
-                apiKey.createdBy()
+                apiKey.getId(),
+                apiKey.getName(),
+                apiKey.getKeyPrefix(),
+                apiKey.getStatus(),
+                apiKey.getRateLimit(),
+                apiKey.getExpiresAt(),
+                apiKey.getLastUsedAt(),
+                apiKey.getCreatedAt(),
+                apiKey.getCreatedBy()
         );
     }
 }

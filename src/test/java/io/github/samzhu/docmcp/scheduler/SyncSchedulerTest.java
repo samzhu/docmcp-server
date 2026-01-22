@@ -1,5 +1,6 @@
 package io.github.samzhu.docmcp.scheduler;
 
+import com.github.f4b6a3.tsid.TsidCreator;
 import io.github.samzhu.docmcp.config.FeatureFlags;
 import io.github.samzhu.docmcp.domain.enums.SourceType;
 import io.github.samzhu.docmcp.domain.enums.VersionStatus;
@@ -15,7 +16,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
-import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -41,6 +41,13 @@ class SyncSchedulerTest {
 
     private SyncScheduler syncScheduler;
 
+    /**
+     * 產生隨機 ID
+     */
+    private String randomId() {
+        return TsidCreator.getTsid().toString();
+    }
+
     @BeforeEach
     void setUp() {
         syncScheduler = new SyncScheduler(syncService, libraryRepository, versionRepository, featureFlags);
@@ -64,11 +71,11 @@ class SyncSchedulerTest {
         // Arrange
         when(featureFlags.isSyncScheduling()).thenReturn(true);
 
-        UUID libraryId = UUID.randomUUID();
+        String libraryId = randomId();
         Library library = createLibrary(libraryId, "spring-boot", "Spring Boot", SourceType.GITHUB,
                 "https://github.com/spring-projects/spring-boot");
 
-        UUID versionId = UUID.randomUUID();
+        String versionId = randomId();
         LibraryVersion version = createVersion(versionId, libraryId, "3.2.0", true);
 
         when(libraryRepository.findAll()).thenReturn(List.of(library));
@@ -87,7 +94,7 @@ class SyncSchedulerTest {
         // Arrange
         when(featureFlags.isSyncScheduling()).thenReturn(true);
 
-        UUID libraryId = UUID.randomUUID();
+        String libraryId = randomId();
         Library library = createLibrary(libraryId, "local-docs", "Local Docs", SourceType.LOCAL, null);
 
         when(libraryRepository.findAll()).thenReturn(List.of(library));
@@ -100,11 +107,11 @@ class SyncSchedulerTest {
         verify(versionRepository, never()).findByLibraryId(any());
     }
 
-    private Library createLibrary(UUID id, String name, String displayName, SourceType sourceType, String sourceUrl) {
-        return new Library(id, name, displayName, null, sourceType, sourceUrl, null, null, null, null);
+    private Library createLibrary(String id, String name, String displayName, SourceType sourceType, String sourceUrl) {
+        return new Library(id, name, displayName, null, sourceType, sourceUrl, null, null, 0L, null, null);
     }
 
-    private LibraryVersion createVersion(UUID id, UUID libraryId, String version, boolean isLatest) {
-        return new LibraryVersion(id, libraryId, version, isLatest, false, VersionStatus.ACTIVE, "docs", null, null, null);
+    private LibraryVersion createVersion(String id, String libraryId, String version, boolean isLatest) {
+        return new LibraryVersion(id, libraryId, version, isLatest, false, VersionStatus.ACTIVE, "docs", null, 0L, null, null);
     }
 }

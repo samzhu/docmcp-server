@@ -1,5 +1,6 @@
 package io.github.samzhu.docmcp.mcp.tool.discovery;
 
+import com.github.f4b6a3.tsid.TsidCreator;
 import io.github.samzhu.docmcp.domain.enums.SourceType;
 import io.github.samzhu.docmcp.domain.model.Library;
 import io.github.samzhu.docmcp.service.LibraryService;
@@ -10,7 +11,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
@@ -25,6 +25,13 @@ class ListLibrariesToolTest {
     private LibraryService libraryService;
 
     private ListLibrariesTool listLibrariesTool;
+
+    /**
+     * 產生隨機 ID
+     */
+    private String randomId() {
+        return TsidCreator.getTsid().toString();
+    }
 
     @BeforeEach
     void setUp() {
@@ -78,7 +85,7 @@ class ListLibrariesToolTest {
      */
     private Library createLibrary(String name, String displayName, String category) {
         return new Library(
-                UUID.randomUUID(),
+                randomId(),
                 name,
                 displayName,
                 null,
@@ -86,6 +93,7 @@ class ListLibrariesToolTest {
                 null,
                 category,
                 null,
+                0L,     // version（模擬從資料庫讀取）
                 null,
                 null
         );

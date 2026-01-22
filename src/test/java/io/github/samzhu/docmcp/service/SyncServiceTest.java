@@ -1,9 +1,9 @@
 package io.github.samzhu.docmcp.service;
 
+import com.github.f4b6a3.tsid.TsidCreator;
 import io.github.samzhu.docmcp.domain.enums.SyncStatus;
 import io.github.samzhu.docmcp.domain.model.SyncHistory;
 import io.github.samzhu.docmcp.infrastructure.github.GitHubContentFetcher;
-import io.github.samzhu.docmcp.infrastructure.github.GitHubFile;
 import io.github.samzhu.docmcp.infrastructure.github.strategy.FetchResult;
 import io.github.samzhu.docmcp.infrastructure.local.LocalFileClient;
 import io.github.samzhu.docmcp.infrastructure.parser.DocumentParser;
@@ -27,15 +27,12 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -50,6 +47,9 @@ import static org.mockito.Mockito.when;
 @MockitoSettings(strictness = Strictness.LENIENT)
 @DisplayName("SyncService")
 class SyncServiceTest {
+
+    @Mock
+    private IdService idService;
 
     @Mock
     private GitHubContentFetcher gitHubContentFetcher;
@@ -83,12 +83,23 @@ class SyncServiceTest {
 
     private SyncService syncService;
 
+    /**
+     * 產生隨機 ID
+     */
+    private String randomId() {
+        return TsidCreator.getTsid().toString();
+    }
+
     @BeforeEach
     void setUp() {
         // 建立包含一個 parser 的列表
         List<DocumentParser> parsers = List.of(documentParser);
 
+        // Mock IdService 回傳隨機 ID
+        when(idService.generateId()).thenAnswer(inv -> randomId());
+
         syncService = new SyncService(
+                idService,
                 gitHubContentFetcher,
                 localFileClient,
                 parsers,
@@ -112,7 +123,7 @@ class SyncServiceTest {
         @DisplayName("正常同步 GitHub 文件")
         void shouldSyncSuccessfully_whenGitHubFilesExist() throws ExecutionException, InterruptedException {
             // Given - 準備測試資料
-            UUID versionId = UUID.randomUUID();
+            String versionId = randomId();
             String owner = "spring-projects";
             String repo = "spring-boot";
             String docsPath = "docs";
@@ -121,7 +132,7 @@ class SyncServiceTest {
             // Mock 無進行中的同步任務
             when(syncHistoryRepository.hasRunningSyncTask(versionId)).thenReturn(false);
 
-            // Mock 建立同步歷史
+            // Mock 建立同步歷史（save 後會呼叫 findById 取得 DB 生成的 startedAt）
             SyncHistory pendingHistory = createSyncHistory(versionId, SyncStatus.PENDING);
             SyncHistory runningHistory = createSyncHistory(versionId, SyncStatus.RUNNING);
             SyncHistory successHistory = createSyncHistory(versionId, SyncStatus.SUCCESS);
@@ -130,6 +141,12 @@ class SyncServiceTest {
                     .thenReturn(pendingHistory)
                     .thenReturn(runningHistory)
                     .thenReturn(successHistory);
+
+            // Mock findById（save 後會呼叫 findById 取得 DB 生成的 createdAt/updatedAt）
+            when(syncHistoryRepository.findById(any(String.class)))
+                    .thenReturn(Optional.of(pendingHistory))
+                    .thenReturn(Optional.of(runningHistory))
+                    .thenReturn(Optional.of(successHistory));
 
             // Mock GitHub 取得文件（沒有文件，簡化測試）
             FetchResult fetchResult = new FetchResult(List.of(), Map.of(), "API_TREE");
@@ -149,7 +166,7 @@ class SyncServiceTest {
         @DisplayName("已有進行中的同步任務時拋出例外")
         void shouldThrowException_whenSyncAlreadyRunning() {
             // Given - 準備測試資料
-            UUID versionId = UUID.randomUUID();
+            String versionId = randomId();
             String owner = "spring-projects";
             String repo = "spring-boot";
             String docsPath = "docs";
@@ -168,7 +185,7 @@ class SyncServiceTest {
         @DisplayName("GitHub API 失敗時記錄錯誤狀態")
         void shouldRecordFailedStatus_whenGitHubApiFails() throws ExecutionException, InterruptedException {
             // Given - 準備測試資料
-            UUID versionId = UUID.randomUUID();
+            String versionId = randomId();
             String owner = "nonexistent";
             String repo = "repo";
             String docsPath = "docs";
@@ -177,7 +194,7 @@ class SyncServiceTest {
             // Mock 無進行中的同步任務
             when(syncHistoryRepository.hasRunningSyncTask(versionId)).thenReturn(false);
 
-            // Mock 建立同步歷史
+            // Mock 建立同步歷史（save 後會呼叫 findById 取得 DB 生成的 startedAt）
             SyncHistory pendingHistory = createSyncHistory(versionId, SyncStatus.PENDING);
             SyncHistory runningHistory = createSyncHistory(versionId, SyncStatus.RUNNING);
             SyncHistory failedHistory = createSyncHistory(versionId, SyncStatus.FAILED);
@@ -186,6 +203,12 @@ class SyncServiceTest {
                     .thenReturn(pendingHistory)
                     .thenReturn(runningHistory)
                     .thenReturn(failedHistory);
+
+            // Mock findById（save 後會呼叫 findById 取得 DB 生成的 createdAt/updatedAt）
+            when(syncHistoryRepository.findById(any(String.class)))
+                    .thenReturn(Optional.of(pendingHistory))
+                    .thenReturn(Optional.of(runningHistory))
+                    .thenReturn(Optional.of(failedHistory));
 
             // Mock GitHub API 失敗
             when(gitHubContentFetcher.fetch(owner, repo, docsPath, ref))
@@ -211,8 +234,8 @@ class SyncServiceTest {
         @DisplayName("正常取得同步狀態")
         void shouldReturnSyncStatus_whenSyncExists() {
             // Given - 準備測試資料
-            UUID syncId = UUID.randomUUID();
-            SyncHistory syncHistory = createSyncHistory(UUID.randomUUID(), SyncStatus.SUCCESS);
+            String syncId = randomId();
+            SyncHistory syncHistory = createSyncHistory(randomId(), SyncStatus.SUCCESS);
 
             when(syncHistoryRepository.findById(syncId)).thenReturn(Optional.of(syncHistory));
 
@@ -221,7 +244,7 @@ class SyncServiceTest {
 
             // Then - 驗證結果
             assertThat(result).isPresent();
-            assertThat(result.get().status()).isEqualTo(SyncStatus.SUCCESS);
+            assertThat(result.get().getStatus()).isEqualTo(SyncStatus.SUCCESS);
             verify(syncHistoryRepository).findById(syncId);
         }
 
@@ -229,7 +252,7 @@ class SyncServiceTest {
         @DisplayName("同步不存在時返回 Optional.empty()")
         void shouldReturnEmpty_whenSyncNotExists() {
             // Given - 準備測試資料
-            UUID syncId = UUID.randomUUID();
+            String syncId = randomId();
 
             when(syncHistoryRepository.findById(syncId)).thenReturn(Optional.empty());
 
@@ -252,7 +275,7 @@ class SyncServiceTest {
         @DisplayName("正常取得版本的最新同步記錄")
         void shouldReturnLatestSyncHistory_whenExists() {
             // Given - 準備測試資料
-            UUID versionId = UUID.randomUUID();
+            String versionId = randomId();
             SyncHistory latestHistory = createSyncHistory(versionId, SyncStatus.SUCCESS);
 
             when(syncHistoryRepository.findLatestByVersionId(versionId))
@@ -270,7 +293,7 @@ class SyncServiceTest {
         @DisplayName("版本無同步記錄時返回 Optional.empty()")
         void shouldReturnEmpty_whenNoSyncHistory() {
             // Given - 準備測試資料
-            UUID versionId = UUID.randomUUID();
+            String versionId = randomId();
 
             when(syncHistoryRepository.findLatestByVersionId(versionId))
                     .thenReturn(Optional.empty());
@@ -294,7 +317,7 @@ class SyncServiceTest {
         @DisplayName("取得指定版本的同步歷史列表")
         void shouldReturnSyncHistoryList_forSpecificVersion() {
             // Given - 準備測試資料
-            UUID versionId = UUID.randomUUID();
+            String versionId = randomId();
             int limit = 10;
             List<SyncHistory> historyList = List.of(
                     createSyncHistory(versionId, SyncStatus.SUCCESS),
@@ -318,8 +341,8 @@ class SyncServiceTest {
             // Given - 準備測試資料
             int limit = 10;
             List<SyncHistory> historyList = List.of(
-                    createSyncHistory(UUID.randomUUID(), SyncStatus.SUCCESS),
-                    createSyncHistory(UUID.randomUUID(), SyncStatus.RUNNING)
+                    createSyncHistory(randomId(), SyncStatus.SUCCESS),
+                    createSyncHistory(randomId(), SyncStatus.RUNNING)
             );
 
             when(syncHistoryRepository.findAllOrderByStartedAtDesc(limit))
@@ -339,17 +362,21 @@ class SyncServiceTest {
     /**
      * 建立測試用的同步歷史記錄
      */
-    private SyncHistory createSyncHistory(UUID versionId, SyncStatus status) {
+    private SyncHistory createSyncHistory(String versionId, SyncStatus status) {
+        var now = OffsetDateTime.now();
         return new SyncHistory(
-                UUID.randomUUID(),
+                randomId(),
                 versionId,
                 status,
-                OffsetDateTime.now(),
-                status == SyncStatus.SUCCESS || status == SyncStatus.FAILED ? OffsetDateTime.now() : null,
+                now,
+                status == SyncStatus.SUCCESS || status == SyncStatus.FAILED ? now : null,
                 0,
                 0,
                 status == SyncStatus.FAILED ? "Test error" : null,
-                Map.of()
+                Map.of(),
+                null,  // version
+                now,   // createdAt
+                now    // updatedAt
         );
     }
 }

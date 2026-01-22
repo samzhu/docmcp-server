@@ -10,7 +10,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 /**
  * 函式庫元資料資源提供者
@@ -48,26 +47,25 @@ public class LibraryResourceProvider {
     public ReadResourceResult getLibraryResource(
             String libraryId
     ) {
-        var uuid = UUID.fromString(libraryId);
-        var library = libraryService.getLibraryById(uuid);
-        var versions = libraryService.getLibraryVersionsById(uuid);
+        var library = libraryService.getLibraryById(libraryId);
+        var versions = libraryService.getLibraryVersionsById(libraryId);
 
         // 建立回傳資料結構
         var metadata = Map.of(
-                "id", library.id().toString(),
-                "name", library.name(),
-                "displayName", library.displayName() != null ? library.displayName() : library.name(),
-                "description", library.description() != null ? library.description() : "",
-                "category", library.category() != null ? library.category() : "",
-                "tags", library.tags() != null ? library.tags() : List.of(),
-                "sourceType", library.sourceType() != null ? library.sourceType().name() : "",
-                "sourceUrl", library.sourceUrl() != null ? library.sourceUrl() : "",
+                "id", library.getId(),
+                "name", library.getName(),
+                "displayName", library.getDisplayName() != null ? library.getDisplayName() : library.getName(),
+                "description", library.getDescription() != null ? library.getDescription() : "",
+                "category", library.getCategory() != null ? library.getCategory() : "",
+                "tags", library.getTags() != null ? library.getTags() : List.of(),
+                "sourceType", library.getSourceType() != null ? library.getSourceType().name() : "",
+                "sourceUrl", library.getSourceUrl() != null ? library.getSourceUrl() : "",
                 "versions", versions.stream()
                         .map(v -> Map.of(
-                                "id", v.id().toString(),
-                                "version", v.version(),
-                                "isLatest", v.isLatest(),
-                                "status", v.status().name()
+                                "id", v.getId(),
+                                "version", v.getVersion(),
+                                "isLatest", v.getIsLatest(),
+                                "status", v.getStatus().name()
                         ))
                         .toList()
         );
@@ -110,6 +108,6 @@ public class LibraryResourceProvider {
         var library = resolved.library();
 
         // 複用 getLibraryResource 的邏輯
-        return getLibraryResource(library.id().toString());
+        return getLibraryResource(library.getId());
     }
 }

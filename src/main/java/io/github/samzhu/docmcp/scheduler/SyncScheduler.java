@@ -64,8 +64,8 @@ public class SyncScheduler {
             Iterable<Library> libraries = libraryRepository.findAll();
 
             for (Library library : libraries) {
-                if (library.sourceType() != SourceType.GITHUB) {
-                    log.debug("Skipping non-GitHub library: {}", library.name());
+                if (library.getSourceType() != SourceType.GITHUB) {
+                    log.debug("Skipping non-GitHub library: {}", library.getName());
                     continue;
                 }
 
@@ -80,33 +80,33 @@ public class SyncScheduler {
     }
 
     private void syncLibrary(Library library) {
-        String sourceUrl = library.sourceUrl();
+        String sourceUrl = library.getSourceUrl();
         if (sourceUrl == null || sourceUrl.isBlank()) {
-            log.warn("Library {} has no source URL, skipping", library.name());
+            log.warn("Library {} has no source URL, skipping", library.getName());
             return;
         }
 
         Matcher matcher = GITHUB_URL_PATTERN.matcher(sourceUrl);
         if (!matcher.find()) {
-            log.warn("Invalid GitHub URL for library {}: {}", library.name(), sourceUrl);
+            log.warn("Invalid GitHub URL for library {}: {}", library.getName(), sourceUrl);
             return;
         }
 
         String owner = matcher.group(1);
         String repo = matcher.group(2);
 
-        List<LibraryVersion> versions = versionRepository.findByLibraryId(library.id());
+        List<LibraryVersion> versions = versionRepository.findByLibraryId(library.getId());
         for (LibraryVersion version : versions) {
             try {
-                log.info("Syncing library: {} version: {}", library.name(), version.version());
-                String docsPath = version.docsPath() != null ? version.docsPath() : "docs";
-                String ref = version.version();
+                log.info("Syncing library: {} version: {}", library.getName(), version.getVersion());
+                String docsPath = version.getDocsPath() != null ? version.getDocsPath() : "docs";
+                String ref = version.getVersion();
 
-                syncService.syncFromGitHub(version.id(), owner, repo, docsPath, ref);
+                syncService.syncFromGitHub(version.getId(), owner, repo, docsPath, ref);
 
             } catch (Exception e) {
                 log.error("Failed to sync library {} version {}: {}",
-                        library.name(), version.version(), e.getMessage());
+                        library.getName(), version.getVersion(), e.getMessage());
             }
         }
     }

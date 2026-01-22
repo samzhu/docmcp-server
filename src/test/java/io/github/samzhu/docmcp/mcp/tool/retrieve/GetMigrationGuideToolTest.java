@@ -1,5 +1,6 @@
 package io.github.samzhu.docmcp.mcp.tool.retrieve;
 
+import com.github.f4b6a3.tsid.TsidCreator;
 import io.github.samzhu.docmcp.config.FeatureFlags;
 import io.github.samzhu.docmcp.domain.enums.VersionStatus;
 import io.github.samzhu.docmcp.domain.model.Document;
@@ -14,7 +15,6 @@ import org.junit.jupiter.api.Test;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -31,6 +31,13 @@ class GetMigrationGuideToolTest {
     private DocumentRepository documentRepository;
     private GetMigrationGuideTool getMigrationGuideTool;
 
+    /**
+     * 產生隨機 ID
+     */
+    private String randomId() {
+        return TsidCreator.getTsid().toString();
+    }
+
     @BeforeEach
     void setUp() {
         featureFlags = mock(FeatureFlags.class);
@@ -44,7 +51,7 @@ class GetMigrationGuideToolTest {
     void shouldReturnDisabledMessageWhenFeatureIsDisabled() {
         // Arrange
         when(featureFlags.isMigrationGuides()).thenReturn(false);
-        UUID libraryId = UUID.randomUUID();
+        String libraryId = randomId();
 
         // Act
         GetMigrationGuideResult result = getMigrationGuideTool.getMigrationGuide(
@@ -63,7 +70,7 @@ class GetMigrationGuideToolTest {
     void shouldReturnErrorWhenFromVersionIsBlank() {
         // Arrange
         when(featureFlags.isMigrationGuides()).thenReturn(true);
-        UUID libraryId = UUID.randomUUID();
+        String libraryId = randomId();
 
         // Act
         GetMigrationGuideResult result = getMigrationGuideTool.getMigrationGuide(
@@ -79,7 +86,7 @@ class GetMigrationGuideToolTest {
     void shouldReturnErrorWhenToVersionIsBlank() {
         // Arrange
         when(featureFlags.isMigrationGuides()).thenReturn(true);
-        UUID libraryId = UUID.randomUUID();
+        String libraryId = randomId();
 
         // Act
         GetMigrationGuideResult result = getMigrationGuideTool.getMigrationGuide(
@@ -95,7 +102,7 @@ class GetMigrationGuideToolTest {
     void shouldReturnEmptyResultWhenNoVersionsFound() {
         // Arrange
         when(featureFlags.isMigrationGuides()).thenReturn(true);
-        UUID libraryId = UUID.randomUUID();
+        String libraryId = randomId();
         when(versionRepository.findByLibraryId(libraryId)).thenReturn(List.of());
 
         // Act
@@ -112,11 +119,11 @@ class GetMigrationGuideToolTest {
     void shouldFindMigrationGuideByTitle() {
         // Arrange
         when(featureFlags.isMigrationGuides()).thenReturn(true);
-        UUID libraryId = UUID.randomUUID();
-        UUID versionId = UUID.randomUUID();
+        String libraryId = randomId();
+        String versionId = randomId();
 
         var version = createVersion(versionId, libraryId, "3.5.0");
-        var migrationDoc = createDocument(UUID.randomUUID(), versionId,
+        var migrationDoc = createDocument(randomId(), versionId,
                 "Migration Guide from 3.0 to 3.5",
                 "docs/migration.md",
                 "This guide helps you migrate...");
@@ -139,11 +146,11 @@ class GetMigrationGuideToolTest {
     void shouldFindUpgradeGuideByPath() {
         // Arrange
         when(featureFlags.isMigrationGuides()).thenReturn(true);
-        UUID libraryId = UUID.randomUUID();
-        UUID versionId = UUID.randomUUID();
+        String libraryId = randomId();
+        String versionId = randomId();
 
         var version = createVersion(versionId, libraryId, "3.5.0");
-        var upgradeDoc = createDocument(UUID.randomUUID(), versionId,
+        var upgradeDoc = createDocument(randomId(), versionId,
                 "Version 3.5 Guide",
                 "docs/upgrading-to-3.5.md",
                 "Steps to upgrade your application...");
@@ -165,12 +172,12 @@ class GetMigrationGuideToolTest {
     void shouldFindBreakingChangesDocumentByContent() {
         // Arrange
         when(featureFlags.isMigrationGuides()).thenReturn(true);
-        UUID libraryId = UUID.randomUUID();
-        UUID versionId = UUID.randomUUID();
+        String libraryId = randomId();
+        String versionId = randomId();
 
         var version = createVersion(versionId, libraryId, "3.5.0");
         // Use a title and path that doesn't match other keywords
-        var breakingDoc = createDocument(UUID.randomUUID(), versionId,
+        var breakingDoc = createDocument(randomId(), versionId,
                 "Version 3.5 Notes",
                 "docs/notes.md",
                 "## Breaking Changes\n\nThe following APIs have been removed...");
@@ -192,11 +199,11 @@ class GetMigrationGuideToolTest {
     void shouldFindChangelogDocument() {
         // Arrange
         when(featureFlags.isMigrationGuides()).thenReturn(true);
-        UUID libraryId = UUID.randomUUID();
-        UUID versionId = UUID.randomUUID();
+        String libraryId = randomId();
+        String versionId = randomId();
 
         var version = createVersion(versionId, libraryId, "3.5.0");
-        var changelogDoc = createDocument(UUID.randomUUID(), versionId,
+        var changelogDoc = createDocument(randomId(), versionId,
                 "Changelog",
                 "CHANGELOG.md",
                 "## [3.5.0] - 2024-01-15\n### Added\n- New feature...");
@@ -218,11 +225,11 @@ class GetMigrationGuideToolTest {
     void shouldNotIncludeUnrelatedDocuments() {
         // Arrange
         when(featureFlags.isMigrationGuides()).thenReturn(true);
-        UUID libraryId = UUID.randomUUID();
-        UUID versionId = UUID.randomUUID();
+        String libraryId = randomId();
+        String versionId = randomId();
 
         var version = createVersion(versionId, libraryId, "3.5.0");
-        var unrelatedDoc = createDocument(UUID.randomUUID(), versionId,
+        var unrelatedDoc = createDocument(randomId(), versionId,
                 "Getting Started",
                 "docs/getting-started.md",
                 "Welcome to our library! This guide will help you get started...");
@@ -244,15 +251,15 @@ class GetMigrationGuideToolTest {
     void shouldSortGuidesByRelevancePriority() {
         // Arrange
         when(featureFlags.isMigrationGuides()).thenReturn(true);
-        UUID libraryId = UUID.randomUUID();
-        UUID versionId = UUID.randomUUID();
+        String libraryId = randomId();
+        String versionId = randomId();
 
         var version = createVersion(versionId, libraryId, "3.5.0");
-        var changelogDoc = createDocument(UUID.randomUUID(), versionId,
+        var changelogDoc = createDocument(randomId(), versionId,
                 "Changelog", "CHANGELOG.md", "Changes...");
-        var migrationDoc = createDocument(UUID.randomUUID(), versionId,
+        var migrationDoc = createDocument(randomId(), versionId,
                 "Migration Guide", "docs/migration.md", "Migrate...");
-        var upgradeDoc = createDocument(UUID.randomUUID(), versionId,
+        var upgradeDoc = createDocument(randomId(), versionId,
                 "Upgrade Steps", "docs/upgrade.md", "Upgrade...");
 
         when(versionRepository.findByLibraryId(libraryId)).thenReturn(List.of(version));
@@ -278,12 +285,12 @@ class GetMigrationGuideToolTest {
     void shouldTruncateLongContentInExcerpt() {
         // Arrange
         when(featureFlags.isMigrationGuides()).thenReturn(true);
-        UUID libraryId = UUID.randomUUID();
-        UUID versionId = UUID.randomUUID();
+        String libraryId = randomId();
+        String versionId = randomId();
 
         var version = createVersion(versionId, libraryId, "3.5.0");
         String longContent = "Migration guide content. ".repeat(50);
-        var migrationDoc = createDocument(UUID.randomUUID(), versionId,
+        var migrationDoc = createDocument(randomId(), versionId,
                 "Migration Guide", "docs/migration.md", longContent);
 
         when(versionRepository.findByLibraryId(libraryId)).thenReturn(List.of(version));
@@ -300,13 +307,13 @@ class GetMigrationGuideToolTest {
     }
 
     // Helper methods
-    private LibraryVersion createVersion(UUID id, UUID libraryId, String version) {
+    private LibraryVersion createVersion(String id, String libraryId, String version) {
         return new LibraryVersion(id, libraryId, version, true, false,
-                VersionStatus.ACTIVE, "docs", null, OffsetDateTime.now(), OffsetDateTime.now());
+                VersionStatus.ACTIVE, "docs", null, null, OffsetDateTime.now(), OffsetDateTime.now());
     }
 
-    private Document createDocument(UUID id, UUID versionId, String title, String path, String content) {
+    private Document createDocument(String id, String versionId, String title, String path, String content) {
         return new Document(id, versionId, title, path, content, "hash",
-                "markdown", Map.of(), OffsetDateTime.now(), OffsetDateTime.now());
+                "markdown", Map.of(), null, OffsetDateTime.now(), OffsetDateTime.now());
     }
 }

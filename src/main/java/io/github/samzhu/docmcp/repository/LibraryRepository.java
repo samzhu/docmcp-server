@@ -9,17 +9,16 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 /**
  * 函式庫資料存取介面
  * <p>
  * 提供函式庫的 CRUD 操作及自訂查詢方法。
- * 使用 Spring Data JDBC 實作。
+ * 使用 Spring Data JDBC 實作，ID 類型為 TSID 字串。
  * </p>
  */
 @Repository
-public interface LibraryRepository extends CrudRepository<Library, UUID> {
+public interface LibraryRepository extends CrudRepository<Library, String> {
 
     /**
      * 根據名稱查找函式庫

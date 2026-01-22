@@ -5,7 +5,6 @@ import io.github.samzhu.docmcp.domain.model.LibraryVersion;
 
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
-import java.util.UUID;
 
 /**
  * 函式庫版本資料傳輸物件
@@ -13,8 +12,8 @@ import java.util.UUID;
  * 用於 Web API 回傳版本資訊。
  * </p>
  *
- * @param id          版本 ID
- * @param libraryId   函式庫 ID
+ * @param id          版本 ID（TSID 格式）
+ * @param libraryId   函式庫 ID（TSID 格式）
  * @param version     版本號
  * @param isLatest    是否為最新版本
  * @param status      版本狀態
@@ -24,8 +23,8 @@ import java.util.UUID;
  * @param updatedAt   更新時間
  */
 public record LibraryVersionDto(
-        UUID id,
-        UUID libraryId,
+        String id,
+        String libraryId,
         String version,
         Boolean isLatest,
         VersionStatus status,
@@ -39,15 +38,15 @@ public record LibraryVersionDto(
      */
     public static LibraryVersionDto from(LibraryVersion version) {
         return new LibraryVersionDto(
-                version.id(),
-                version.libraryId(),
-                version.version(),
-                version.isLatest(),
-                version.status(),
-                version.docsPath(),
-                version.releaseDate(),
-                version.createdAt(),
-                version.updatedAt()
+                version.getId(),
+                version.getLibraryId(),
+                version.getVersion(),
+                version.getIsLatest(),
+                version.getStatus(),
+                version.getDocsPath(),
+                version.getReleaseDate(),
+                version.getCreatedAt(),
+                version.getUpdatedAt()
         );
     }
 }

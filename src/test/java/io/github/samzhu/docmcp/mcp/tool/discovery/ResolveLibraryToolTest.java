@@ -1,5 +1,6 @@
 package io.github.samzhu.docmcp.mcp.tool.discovery;
 
+import com.github.f4b6a3.tsid.TsidCreator;
 import io.github.samzhu.docmcp.domain.enums.SourceType;
 import io.github.samzhu.docmcp.domain.enums.VersionStatus;
 import io.github.samzhu.docmcp.domain.exception.LibraryNotFoundException;
@@ -12,8 +13,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -30,6 +29,13 @@ class ResolveLibraryToolTest {
 
     private ResolveLibraryTool resolveLibraryTool;
 
+    /**
+     * 產生隨機 ID
+     */
+    private String randomId() {
+        return TsidCreator.getTsid().toString();
+    }
+
     @BeforeEach
     void setUp() {
         resolveLibraryTool = new ResolveLibraryTool(libraryService);
@@ -39,7 +45,7 @@ class ResolveLibraryToolTest {
     void shouldResolveLibraryWithLatestVersion() {
         // 測試解析函式庫的最新版本
         var library = createLibrary("spring-boot", "Spring Boot");
-        var version = createVersion(library.id(), "3.2.0", true);
+        var version = createVersion(library.getId(), "3.2.0", true);
         var resolved = new ResolvedLibrary(library, version, "3.2.0");
         when(libraryService.resolveLibrary("spring-boot", null)).thenReturn(resolved);
 
@@ -54,7 +60,7 @@ class ResolveLibraryToolTest {
     void shouldResolveLibraryWithSpecificVersion() {
         // 測試解析函式庫的指定版本
         var library = createLibrary("spring-boot", "Spring Boot");
-        var version = createVersion(library.id(), "3.1.0", false);
+        var version = createVersion(library.getId(), "3.1.0", false);
         var resolved = new ResolvedLibrary(library, version, "3.1.0");
         when(libraryService.resolveLibrary("spring-boot", "3.1.0")).thenReturn(resolved);
 
@@ -78,7 +84,7 @@ class ResolveLibraryToolTest {
      */
     private Library createLibrary(String name, String displayName) {
         return new Library(
-                UUID.randomUUID(),
+                randomId(),
                 name,
                 displayName,
                 null,
@@ -86,6 +92,7 @@ class ResolveLibraryToolTest {
                 null,
                 null,
                 null,
+                0L,     // version（模擬從資料庫讀取）
                 null,
                 null
         );
@@ -94,9 +101,9 @@ class ResolveLibraryToolTest {
     /**
      * 建立測試用的版本
      */
-    private LibraryVersion createVersion(UUID libraryId, String version, boolean isLatest) {
+    private LibraryVersion createVersion(String libraryId, String version, boolean isLatest) {
         return new LibraryVersion(
-                UUID.randomUUID(),
+                randomId(),
                 libraryId,
                 version,
                 isLatest,
@@ -104,6 +111,7 @@ class ResolveLibraryToolTest {
                 VersionStatus.ACTIVE,
                 null,
                 null,
+                0L,     // entityVersion（模擬從資料庫讀取）
                 null,
                 null
         );

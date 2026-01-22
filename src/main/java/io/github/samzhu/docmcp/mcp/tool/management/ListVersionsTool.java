@@ -8,8 +8,6 @@ import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Component;
 
-import java.util.UUID;
-
 /**
  * 列出版本工具
  * <p>
@@ -49,26 +47,25 @@ public class ListVersionsTool {
                     回傳：版本列表，包含版本號、狀態、發布日期等資訊。
                     """)
     public ListVersionsResult listVersions(
-            @ToolParam(description = "函式庫 ID", required = true)
+            @ToolParam(description = "函式庫 ID（TSID 格式）", required = true)
             String libraryId,
             @ToolParam(description = "是否包含已棄用版本（預設 false）", required = false)
             Boolean includeDeprecated
     ) {
-        var uuid = UUID.fromString(libraryId);
-        var library = libraryService.getLibraryById(uuid);
-        var versions = libraryService.getLibraryVersionsById(uuid);
+        var library = libraryService.getLibraryById(libraryId);
+        var versions = libraryService.getLibraryVersionsById(libraryId);
 
         // 預設不包含棄用版本
         boolean includeAll = includeDeprecated != null && includeDeprecated;
 
         var filteredVersions = versions.stream()
-                .filter(v -> includeAll || v.status() == VersionStatus.ACTIVE)
+                .filter(v -> includeAll || v.getStatus() == VersionStatus.ACTIVE)
                 .map(LibraryVersionDto::from)
                 .toList();
 
         return new ListVersionsResult(
                 libraryId,
-                library.name(),
+                library.getName(),
                 filteredVersions,
                 filteredVersions.size()
         );

@@ -13,7 +13,6 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.UUID;
 
 /**
  * 取得相關文件工具
@@ -59,25 +58,23 @@ public class GetRelatedDocsTool {
                     回傳：相關文件列表，包含標題、路徑和相似度分數。
                     """)
     public GetRelatedDocsResult getRelatedDocs(
-            @ToolParam(description = "文件 ID", required = true)
+            @ToolParam(description = "文件 ID（TSID 格式）", required = true)
             String documentId,
             @ToolParam(description = "最大回傳數量（可選，預設 5）", required = false)
             Integer limit
     ) {
-        var docId = UUID.fromString(documentId);
-
         // 取得來源文件
-        var sourceDoc = documentRepository.findById(docId)
+        var sourceDoc = documentRepository.findById(documentId)
                 .orElseThrow(() -> new LibraryNotFoundException("文件不存在: " + documentId));
 
         // 取得來源文件的第一個區塊（代表向量）
-        var sourceChunk = chunkRepository.findFirstByDocumentId(docId);
-        if (sourceChunk == null || sourceChunk.embedding() == null) {
+        var sourceChunk = chunkRepository.findFirstByDocumentId(documentId);
+        if (sourceChunk == null || sourceChunk.getEmbedding() == null) {
             // 沒有 embedding，回傳空結果
             return new GetRelatedDocsResult(
                     documentId,
-                    sourceDoc.title(),
-                    sourceDoc.path(),
+                    sourceDoc.getTitle(),
+                    sourceDoc.getPath(),
                     List.of()
             );
         }
@@ -86,44 +83,44 @@ public class GetRelatedDocsTool {
         int maxResults = limit != null && limit > 0 ? limit : DEFAULT_LIMIT;
 
         // 搜尋相似區塊（排除來源文件）
-        String vectorString = toVectorString(sourceChunk.embedding());
+        String vectorString = toVectorString(sourceChunk.getEmbedding());
         var similarChunks = chunkRepository.findSimilarChunksExcludingDocument(
-                docId, vectorString, maxResults * 2);  // 多取一些以確保去重後有足夠數量
+                documentId, vectorString, maxResults * 2);  // 多取一些以確保去重後有足夠數量
 
         // 去重並轉換為文件
         List<GetRelatedDocsResult.RelatedDoc> relatedDocs = new ArrayList<>();
-        Set<UUID> seenDocIds = new HashSet<>();
+        Set<String> seenDocIds = new HashSet<>();
 
         for (DocumentChunk chunk : similarChunks) {
-            if (seenDocIds.contains(chunk.documentId())) {
+            if (seenDocIds.contains(chunk.getDocumentId())) {
                 continue;  // 跳過已加入的文件
             }
             if (relatedDocs.size() >= maxResults) {
                 break;  // 已達到限制數量
             }
 
-            var relatedDoc = documentRepository.findById(chunk.documentId()).orElse(null);
+            var relatedDoc = documentRepository.findById(chunk.getDocumentId()).orElse(null);
             if (relatedDoc != null) {
-                seenDocIds.add(chunk.documentId());
+                seenDocIds.add(chunk.getDocumentId());
 
                 // 計算相似度
                 double similarity = calculateCosineSimilarity(
-                        sourceChunk.embedding(), chunk.embedding());
+                        sourceChunk.getEmbedding(), chunk.getEmbedding());
 
                 relatedDocs.add(new GetRelatedDocsResult.RelatedDoc(
-                        relatedDoc.id().toString(),
-                        relatedDoc.title(),
-                        relatedDoc.path(),
+                        relatedDoc.getId(),
+                        relatedDoc.getTitle(),
+                        relatedDoc.getPath(),
                         similarity,
-                        truncateContent(chunk.content(), 200)
+                        truncateContent(chunk.getContent(), 200)
                 ));
             }
         }
 
         return new GetRelatedDocsResult(
                 documentId,
-                sourceDoc.title(),
-                sourceDoc.path(),
+                sourceDoc.getTitle(),
+                sourceDoc.getPath(),
                 relatedDocs
         );
     }

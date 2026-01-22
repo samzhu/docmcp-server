@@ -1,15 +1,13 @@
 package io.github.samzhu.docmcp.mcp.dto;
 
-import java.util.UUID;
-
 /**
  * 搜尋結果項目
  * <p>
  * 用於表示單一搜尋結果的資訊。
  * </p>
  *
- * @param documentId   文件 ID
- * @param chunkId      區塊 ID（語意搜尋時使用）
+ * @param documentId   文件 ID（TSID 格式）
+ * @param chunkId      區塊 ID（語意搜尋時使用，TSID 格式）
  * @param title        文件標題
  * @param path         文件路徑
  * @param content      匹配的內容片段
@@ -17,8 +15,8 @@ import java.util.UUID;
  * @param chunkIndex   區塊索引（語意搜尋時使用）
  */
 public record SearchResultItem(
-        UUID documentId,
-        UUID chunkId,
+        String documentId,
+        String chunkId,
         String title,
         String path,
         String content,
@@ -27,16 +25,21 @@ public record SearchResultItem(
 ) {
     /**
      * 從文件搜尋結果建立
+     *
+     * @param documentId 文件 ID（TSID 格式）
      */
-    public static SearchResultItem fromDocument(UUID documentId, String title,
+    public static SearchResultItem fromDocument(String documentId, String title,
                                                  String path, String content, double score) {
         return new SearchResultItem(documentId, null, title, path, content, score, null);
     }
 
     /**
      * 從區塊搜尋結果建立
+     *
+     * @param documentId 文件 ID（TSID 格式）
+     * @param chunkId    區塊 ID（TSID 格式）
      */
-    public static SearchResultItem fromChunk(UUID documentId, UUID chunkId, String title,
+    public static SearchResultItem fromChunk(String documentId, String chunkId, String title,
                                               String path, String content, double score,
                                               int chunkIndex) {
         return new SearchResultItem(documentId, chunkId, title, path, content, score, chunkIndex);

@@ -1,6 +1,7 @@
 package io.github.samzhu.docmcp.infrastructure.vectorstore;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.f4b6a3.tsid.TsidCreator;
 import io.github.samzhu.docmcp.TestConfig;
 import io.github.samzhu.docmcp.TestcontainersConfiguration;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,7 +22,6 @@ import org.springframework.test.context.ActiveProfiles;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -54,8 +54,15 @@ class DocumentChunkVectorStoreIntegrationTest {
     private static final int DIMENSIONS = 768;
 
     // 測試用的 Library 和 Version ID（每個測試會重新建立）
-    private UUID testLibraryId;
-    private UUID testVersionId;
+    private String testLibraryId;
+    private String testVersionId;
+
+    /**
+     * 產生隨機 ID
+     */
+    private String randomId() {
+        return TsidCreator.getTsid().toString();
+    }
 
     @BeforeEach
     void setUp() {
@@ -90,15 +97,15 @@ class DocumentChunkVectorStoreIntegrationTest {
         @DisplayName("新增單一文件到資料庫")
         void shouldAddSingleDocument() {
             // Given - 建立父記錄並準備測試文件
-            UUID documentId = createTestDocument(testVersionId, "/test/doc1.md");
-            String chunkId = UUID.randomUUID().toString();
+            String documentId = createTestDocument(testVersionId, "/test/doc1.md");
+            String chunkId = randomId();
 
             Document document = Document.builder()
                     .id(chunkId)
                     .text("Spring Boot 是一個強大的 Java 框架")
                     .metadata(Map.of(
-                            DocumentChunkVectorStore.METADATA_VERSION_ID, testVersionId.toString(),
-                            DocumentChunkVectorStore.METADATA_DOCUMENT_ID, documentId.toString(),
+                            DocumentChunkVectorStore.METADATA_VERSION_ID, testVersionId,
+                            DocumentChunkVectorStore.METADATA_DOCUMENT_ID, documentId,
                             DocumentChunkVectorStore.METADATA_CHUNK_INDEX, 0,
                             DocumentChunkVectorStore.METADATA_TOKEN_COUNT, 15,
                             DocumentChunkVectorStore.METADATA_DOCUMENT_TITLE, "Spring Boot 入門"
@@ -110,7 +117,7 @@ class DocumentChunkVectorStoreIntegrationTest {
 
             // Then - 驗證資料已寫入資料庫
             Integer count = jdbcTemplate.queryForObject(
-                    "SELECT COUNT(*) FROM document_chunks WHERE id = ?::uuid",
+                    "SELECT COUNT(*) FROM document_chunks WHERE id = ?",
                     Integer.class,
                     chunkId
             );
@@ -121,7 +128,7 @@ class DocumentChunkVectorStoreIntegrationTest {
         @DisplayName("批次新增多個文件")
         void shouldAddMultipleDocuments() {
             // Given - 建立父記錄並準備多個測試文件
-            UUID documentId = createTestDocument(testVersionId, "/test/doc2.md");
+            String documentId = createTestDocument(testVersionId, "/test/doc2.md");
 
             List<Document> documents = List.of(
                     createChunkDocument(testVersionId, documentId, 0, "第一個區塊內容"),
@@ -134,7 +141,7 @@ class DocumentChunkVectorStoreIntegrationTest {
 
             // Then - 驗證所有文件已寫入
             Integer count = jdbcTemplate.queryForObject(
-                    "SELECT COUNT(*) FROM document_chunks WHERE document_id = ?::uuid",
+                    "SELECT COUNT(*) FROM document_chunks WHERE document_id = ?",
                     Integer.class,
                     documentId
             );
@@ -145,15 +152,15 @@ class DocumentChunkVectorStoreIntegrationTest {
         @DisplayName("更新已存在的文件（UPSERT）")
         void shouldUpsertExistingDocument() {
             // Given - 建立父記錄並先新增一個文件
-            UUID documentId = createTestDocument(testVersionId, "/test/doc3.md");
-            String chunkId = UUID.randomUUID().toString();
+            String documentId = createTestDocument(testVersionId, "/test/doc3.md");
+            String chunkId = randomId();
 
             Document originalDoc = Document.builder()
                     .id(chunkId)
                     .text("原始內容")
                     .metadata(Map.of(
-                            DocumentChunkVectorStore.METADATA_VERSION_ID, testVersionId.toString(),
-                            DocumentChunkVectorStore.METADATA_DOCUMENT_ID, documentId.toString(),
+                            DocumentChunkVectorStore.METADATA_VERSION_ID, testVersionId,
+                            DocumentChunkVectorStore.METADATA_DOCUMENT_ID, documentId,
                             DocumentChunkVectorStore.METADATA_CHUNK_INDEX, 0,
                             DocumentChunkVectorStore.METADATA_TOKEN_COUNT, 5
                     ))
@@ -166,8 +173,8 @@ class DocumentChunkVectorStoreIntegrationTest {
                     .id(chunkId)
                     .text("更新後的內容")
                     .metadata(Map.of(
-                            DocumentChunkVectorStore.METADATA_VERSION_ID, testVersionId.toString(),
-                            DocumentChunkVectorStore.METADATA_DOCUMENT_ID, documentId.toString(),
+                            DocumentChunkVectorStore.METADATA_VERSION_ID, testVersionId,
+                            DocumentChunkVectorStore.METADATA_DOCUMENT_ID, documentId,
                             DocumentChunkVectorStore.METADATA_CHUNK_INDEX, 0,
                             DocumentChunkVectorStore.METADATA_TOKEN_COUNT, 8
                     ))
@@ -177,14 +184,14 @@ class DocumentChunkVectorStoreIntegrationTest {
 
             // Then - 驗證內容已更新（只有一筆記錄）
             String content = jdbcTemplate.queryForObject(
-                    "SELECT content FROM document_chunks WHERE id = ?::uuid",
+                    "SELECT content FROM document_chunks WHERE id = ?",
                     String.class,
                     chunkId
             );
             assertThat(content).isEqualTo("更新後的內容");
 
             Integer count = jdbcTemplate.queryForObject(
-                    "SELECT COUNT(*) FROM document_chunks WHERE id = ?::uuid",
+                    "SELECT COUNT(*) FROM document_chunks WHERE id = ?",
                     Integer.class,
                     chunkId
             );
@@ -202,7 +209,7 @@ class DocumentChunkVectorStoreIntegrationTest {
         @DisplayName("搜尋並返回結果")
         void shouldSearchAndReturnResults() {
             // Given - 建立父記錄並準備測試資料
-            UUID documentId = createTestDocument(testVersionId, "/test/search1.md");
+            String documentId = createTestDocument(testVersionId, "/test/search1.md");
 
             List<Document> documents = List.of(
                     createChunkDocument(testVersionId, documentId, 0, "Spring Boot 框架介紹"),
@@ -230,11 +237,11 @@ class DocumentChunkVectorStoreIntegrationTest {
         @DisplayName("使用 filter 過濾 versionId")
         void shouldFilterByVersionId() {
             // Given - 建立兩個版本的測試資料
-            UUID versionId2 = createTestVersion(testLibraryId, "2.0.0");
+            String versionId2 = createTestVersion(testLibraryId, "2.0.0");
 
-            UUID doc1 = createTestDocument(testVersionId, "/test/v1/doc1.md");
-            UUID doc2 = createTestDocument(testVersionId, "/test/v1/doc2.md");
-            UUID doc3 = createTestDocument(versionId2, "/test/v2/doc1.md");
+            String doc1 = createTestDocument(testVersionId, "/test/v1/doc1.md");
+            String doc2 = createTestDocument(testVersionId, "/test/v1/doc2.md");
+            String doc3 = createTestDocument(versionId2, "/test/v2/doc1.md");
 
             vectorStore.add(List.of(
                     createChunkDocument(testVersionId, doc1, 0, "版本 1 的內容"),
@@ -252,7 +259,7 @@ class DocumentChunkVectorStoreIntegrationTest {
                     .similarityThreshold(0.0)
                     .filterExpression(filterBuilder.eq(
                             DocumentChunkVectorStore.METADATA_VERSION_ID,
-                            testVersionId.toString()
+                            testVersionId
                     ).build())
                     .build();
 
@@ -261,7 +268,7 @@ class DocumentChunkVectorStoreIntegrationTest {
             // Then - 只應返回版本 1 的文件
             assertThat(results).hasSize(2);
             assertThat(results).allMatch(doc ->
-                    testVersionId.toString().equals(doc.getMetadata().get(DocumentChunkVectorStore.METADATA_VERSION_ID))
+                    testVersionId.equals(doc.getMetadata().get(DocumentChunkVectorStore.METADATA_VERSION_ID))
             );
         }
 
@@ -269,7 +276,7 @@ class DocumentChunkVectorStoreIntegrationTest {
         @DisplayName("限制返回結果數量（topK）")
         void shouldLimitResultsByTopK() {
             // Given - 建立超過 topK 數量的測試資料
-            UUID documentId = createTestDocument(testVersionId, "/test/topk.md");
+            String documentId = createTestDocument(testVersionId, "/test/topk.md");
 
             List<Document> documents = new ArrayList<>();
             for (int i = 0; i < 10; i++) {
@@ -301,17 +308,17 @@ class DocumentChunkVectorStoreIntegrationTest {
         @DisplayName("依 ID 列表刪除文件")
         void shouldDeleteByIdList() {
             // Given - 建立父記錄並準備測試資料
-            UUID documentId = createTestDocument(testVersionId, "/test/delete1.md");
-            String chunkId1 = UUID.randomUUID().toString();
-            String chunkId2 = UUID.randomUUID().toString();
+            String documentId = createTestDocument(testVersionId, "/test/delete1.md");
+            String chunkId1 = randomId();
+            String chunkId2 = randomId();
 
             vectorStore.add(List.of(
                     Document.builder()
                             .id(chunkId1)
                             .text("要刪除的文件 1")
                             .metadata(Map.of(
-                                    DocumentChunkVectorStore.METADATA_VERSION_ID, testVersionId.toString(),
-                                    DocumentChunkVectorStore.METADATA_DOCUMENT_ID, documentId.toString(),
+                                    DocumentChunkVectorStore.METADATA_VERSION_ID, testVersionId,
+                                    DocumentChunkVectorStore.METADATA_DOCUMENT_ID, documentId,
                                     DocumentChunkVectorStore.METADATA_CHUNK_INDEX, 0
                             ))
                             .build(),
@@ -319,8 +326,8 @@ class DocumentChunkVectorStoreIntegrationTest {
                             .id(chunkId2)
                             .text("要刪除的文件 2")
                             .metadata(Map.of(
-                                    DocumentChunkVectorStore.METADATA_VERSION_ID, testVersionId.toString(),
-                                    DocumentChunkVectorStore.METADATA_DOCUMENT_ID, documentId.toString(),
+                                    DocumentChunkVectorStore.METADATA_VERSION_ID, testVersionId,
+                                    DocumentChunkVectorStore.METADATA_DOCUMENT_ID, documentId,
                                     DocumentChunkVectorStore.METADATA_CHUNK_INDEX, 1
                             ))
                             .build()
@@ -331,7 +338,7 @@ class DocumentChunkVectorStoreIntegrationTest {
 
             // Then - 驗證只刪除了指定的文件
             Integer remainingCount = jdbcTemplate.queryForObject(
-                    "SELECT COUNT(*) FROM document_chunks WHERE document_id = ?::uuid",
+                    "SELECT COUNT(*) FROM document_chunks WHERE document_id = ?",
                     Integer.class,
                     documentId
             );
@@ -339,7 +346,7 @@ class DocumentChunkVectorStoreIntegrationTest {
 
             // 確認正確的文件被保留
             String remainingId = jdbcTemplate.queryForObject(
-                    "SELECT id::text FROM document_chunks WHERE document_id = ?::uuid",
+                    "SELECT id FROM document_chunks WHERE document_id = ?",
                     String.class,
                     documentId
             );
@@ -350,11 +357,11 @@ class DocumentChunkVectorStoreIntegrationTest {
         @DisplayName("依 Filter Expression 刪除文件")
         void shouldDeleteByFilterExpression() {
             // Given - 建立兩個版本的測試資料
-            UUID versionId2 = createTestVersion(testLibraryId, "2.0.0");
+            String versionId2 = createTestVersion(testLibraryId, "2.0.0");
 
-            UUID doc1 = createTestDocument(testVersionId, "/test/del/v1/doc1.md");
-            UUID doc2 = createTestDocument(testVersionId, "/test/del/v1/doc2.md");
-            UUID doc3 = createTestDocument(versionId2, "/test/del/v2/doc1.md");
+            String doc1 = createTestDocument(testVersionId, "/test/del/v1/doc1.md");
+            String doc2 = createTestDocument(testVersionId, "/test/del/v1/doc2.md");
+            String doc3 = createTestDocument(versionId2, "/test/del/v2/doc1.md");
 
             vectorStore.add(List.of(
                     createChunkDocument(testVersionId, doc1, 0, "版本 1 文件 1"),
@@ -368,7 +375,7 @@ class DocumentChunkVectorStoreIntegrationTest {
             FilterExpressionBuilder filterBuilder = new FilterExpressionBuilder();
             vectorStore.delete(filterBuilder.eq(
                     DocumentChunkVectorStore.METADATA_VERSION_ID,
-                    testVersionId.toString()
+                    testVersionId
             ).build());
 
             // Then - 只應刪除版本 1 的文件
@@ -383,7 +390,7 @@ class DocumentChunkVectorStoreIntegrationTest {
                     "SELECT metadata->>'versionId' FROM document_chunks",
                     String.class
             );
-            assertThat(remainingVersionId).isEqualTo(versionId2.toString());
+            assertThat(remainingVersionId).isEqualTo(versionId2);
         }
     }
 
@@ -392,14 +399,14 @@ class DocumentChunkVectorStoreIntegrationTest {
     /**
      * 建立測試用的 Library 記錄
      */
-    private UUID createTestLibrary() {
-        UUID libraryId = UUID.randomUUID();
+    private String createTestLibrary() {
+        String libraryId = randomId();
         jdbcTemplate.update("""
             INSERT INTO libraries (id, name, display_name, source_type, category)
-            VALUES (?::uuid, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?)
             """,
-                libraryId.toString(),
-                "test-lib-" + libraryId.toString().substring(0, 8),
+                libraryId,
+                "test-lib-" + libraryId.substring(0, 8),
                 "Test Library",
                 "GITHUB",
                 "test"
@@ -410,21 +417,21 @@ class DocumentChunkVectorStoreIntegrationTest {
     /**
      * 建立測試用的 LibraryVersion 記錄（使用預設版本號）
      */
-    private UUID createTestVersion(UUID libraryId) {
+    private String createTestVersion(String libraryId) {
         return createTestVersion(libraryId, "1.0.0");
     }
 
     /**
      * 建立測試用的 LibraryVersion 記錄（指定版本號）
      */
-    private UUID createTestVersion(UUID libraryId, String version) {
-        UUID versionId = UUID.randomUUID();
+    private String createTestVersion(String libraryId, String version) {
+        String versionId = randomId();
         jdbcTemplate.update("""
             INSERT INTO library_versions (id, library_id, version, is_latest, status)
-            VALUES (?::uuid, ?::uuid, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?)
             """,
-                versionId.toString(),
-                libraryId.toString(),
+                versionId,
+                libraryId,
                 version,
                 "1.0.0".equals(version),
                 "ACTIVE"
@@ -435,14 +442,14 @@ class DocumentChunkVectorStoreIntegrationTest {
     /**
      * 建立測試用的 Document 記錄並返回其 ID
      */
-    private UUID createTestDocument(UUID versionId, String path) {
-        UUID documentId = UUID.randomUUID();
+    private String createTestDocument(String versionId, String path) {
+        String documentId = randomId();
         jdbcTemplate.update("""
             INSERT INTO documents (id, version_id, title, path, content, doc_type)
-            VALUES (?::uuid, ?::uuid, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?)
             """,
-                documentId.toString(),
-                versionId.toString(),
+                documentId,
+                versionId,
                 "Test Document - " + path,
                 path,
                 "Test content for " + path,
@@ -454,13 +461,13 @@ class DocumentChunkVectorStoreIntegrationTest {
     /**
      * 建立測試用的 Chunk Document（Spring AI Document 格式）
      */
-    private Document createChunkDocument(UUID versionId, UUID documentId, int chunkIndex, String content) {
+    private Document createChunkDocument(String versionId, String documentId, int chunkIndex, String content) {
         return Document.builder()
-                .id(UUID.randomUUID().toString())
+                .id(randomId())
                 .text(content)
                 .metadata(Map.of(
-                        DocumentChunkVectorStore.METADATA_VERSION_ID, versionId.toString(),
-                        DocumentChunkVectorStore.METADATA_DOCUMENT_ID, documentId.toString(),
+                        DocumentChunkVectorStore.METADATA_VERSION_ID, versionId,
+                        DocumentChunkVectorStore.METADATA_DOCUMENT_ID, documentId,
                         DocumentChunkVectorStore.METADATA_CHUNK_INDEX, chunkIndex,
                         DocumentChunkVectorStore.METADATA_TOKEN_COUNT, content.length()
                 ))

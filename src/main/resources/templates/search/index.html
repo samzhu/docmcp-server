@@ -47,8 +47,8 @@
                         <select id="library-filter" name="libraryId" class="form-input">
                             <option value="">All Libraries</option>
                             <option th:each="lib : ${libraries}"
-                                    th:value="${lib.id()}"
-                                    th:text="${lib.displayName()}">Library</option>
+                                    th:value="${lib.id}"
+                                    th:text="${lib.displayName}">Library</option>
                         </select>
                     </div>
                 </div>

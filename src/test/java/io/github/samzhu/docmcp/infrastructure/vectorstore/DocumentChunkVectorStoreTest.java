@@ -1,6 +1,7 @@
 package io.github.samzhu.docmcp.infrastructure.vectorstore;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.f4b6a3.tsid.TsidCreator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -22,7 +23,6 @@ import org.springframework.jdbc.core.RowMapper;
 
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -60,6 +60,13 @@ class DocumentChunkVectorStoreTest {
     // 測試用向量維度
     private static final int DIMENSIONS = 768;
 
+    /**
+     * 產生隨機 ID
+     */
+    private String randomId() {
+        return TsidCreator.getTsid().toString();
+    }
+
     @BeforeEach
     void setUp() {
         vectorStore = new DocumentChunkVectorStore(
@@ -80,13 +87,13 @@ class DocumentChunkVectorStoreTest {
         @DisplayName("正常新增文件並生成 embedding")
         void shouldInsertDocuments_whenValidInput() throws Exception {
             // Given - 準備測試文件
-            String docId = UUID.randomUUID().toString();
-            String documentId = UUID.randomUUID().toString();
+            String docId = randomId();
+            String documentId = randomId();
             Document document = Document.builder()
                     .id(docId)
                     .text("這是測試內容")
                     .metadata(Map.of(
-                            DocumentChunkVectorStore.METADATA_VERSION_ID, UUID.randomUUID().toString(),
+                            DocumentChunkVectorStore.METADATA_VERSION_ID, randomId(),
                             DocumentChunkVectorStore.METADATA_DOCUMENT_ID, documentId,
                             DocumentChunkVectorStore.METADATA_CHUNK_INDEX, 0,
                             DocumentChunkVectorStore.METADATA_TOKEN_COUNT, 10
@@ -213,7 +220,7 @@ class DocumentChunkVectorStoreTest {
         void shouldApplyFilter_whenFilterExpressionProvided() {
             // Given - 準備帶有 filter 的搜尋請求
             String query = "API 文件";
-            String versionId = UUID.randomUUID().toString();
+            String versionId = randomId();
 
             FilterExpressionBuilder filterBuilder = new FilterExpressionBuilder();
             Filter.Expression filterExpression = filterBuilder.eq(
@@ -260,8 +267,8 @@ class DocumentChunkVectorStoreTest {
         void shouldDeleteDocuments_whenValidIdList() {
             // Given - 準備要刪除的 ID 列表
             List<String> idList = List.of(
-                    UUID.randomUUID().toString(),
-                    UUID.randomUUID().toString()
+                    randomId(),
+                    randomId()
             );
 
             // When - 執行刪除
@@ -302,7 +309,7 @@ class DocumentChunkVectorStoreTest {
         @DisplayName("依條件刪除文件")
         void shouldDeleteDocuments_whenValidFilterExpression() {
             // Given - 準備過濾條件
-            String versionId = UUID.randomUUID().toString();
+            String versionId = randomId();
             FilterExpressionBuilder filterBuilder = new FilterExpressionBuilder();
             Filter.Expression filterExpression = filterBuilder.eq(
                     DocumentChunkVectorStore.METADATA_VERSION_ID, versionId

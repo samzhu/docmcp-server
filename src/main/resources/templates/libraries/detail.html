@@ -10,54 +10,54 @@
         <nav class="breadcrumb">
             <a th:href="@{/libraries}">Libraries</a>
             <span class="breadcrumb-separator">/</span>
-            <span class="breadcrumb-current" th:text="${library.displayName()}">Library Name</span>
+            <span class="breadcrumb-current" th:text="${library.displayName}">Library Name</span>
         </nav>
 
         <!-- Library 資訊卡片 -->
         <div class="glass-card-static mb-6">
             <div class="flex items-start justify-between">
                 <div>
-                    <h1 class="text-2xl font-bold text-primary" th:text="${library.displayName()}">Library Name</h1>
-                    <p class="text-sm text-secondary font-mono mt-1" th:text="${library.name()}">library-name</p>
+                    <h1 class="text-2xl font-bold text-primary" th:text="${library.displayName}">Library Name</h1>
+                    <p class="text-sm text-secondary font-mono mt-1" th:text="${library.name}">library-name</p>
                 </div>
                 <div class="space-x-2">
-                    <a th:href="@{/libraries/{id}/edit(id=${library.id()})}" class="btn btn-secondary">Edit</a>
+                    <a th:href="@{/libraries/{id}/edit(id=${library.id})}" class="btn btn-secondary">Edit</a>
                     <button type="button"
                             class="btn btn-danger"
-                            th:data-delete-library="${library.id()}"
-                            th:data-library-name="${library.displayName()}">Delete</button>
+                            th:data-delete-library="${library.id}"
+                            th:data-library-name="${library.displayName}">Delete</button>
                 </div>
             </div>
 
             <!-- 描述 -->
-            <div th:if="${library.description()}" class="mt-4">
-                <p class="text-secondary" th:text="${library.description()}">Description</p>
+            <div th:if="${library.description}" class="mt-4">
+                <p class="text-secondary" th:text="${library.description}">Description</p>
             </div>
 
             <!-- 屬性資訊網格 -->
             <div class="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
                 <div class="info-card">
                     <p class="info-card-label">Source Type</p>
-                    <p class="info-card-value" th:text="${library.sourceType()}">GITHUB</p>
+                    <p class="info-card-value" th:text="${library.sourceType}">GITHUB</p>
                 </div>
-                <div th:if="${library.category()}" class="info-card">
+                <div th:if="${library.category}" class="info-card">
                     <p class="info-card-label">Category</p>
-                    <p class="info-card-value" th:text="${library.category()}">backend</p>
+                    <p class="info-card-value" th:text="${library.category}">backend</p>
                 </div>
-                <div th:if="${library.sourceUrl()}" class="info-card" style="grid-column: span 2;">
+                <div th:if="${library.sourceUrl}" class="info-card" style="grid-column: span 2;">
                     <p class="info-card-label">Source URL</p>
-                    <a th:href="${library.sourceUrl()}"
-                       th:text="${library.sourceUrl()}"
+                    <a th:href="${library.sourceUrl}"
+                       th:text="${library.sourceUrl}"
                        class="text-accent text-sm truncate block mt-1"
                        target="_blank">URL</a>
                 </div>
             </div>
 
             <!-- 標籤 -->
-            <div th:if="${library.tags() != null && !library.tags().isEmpty()}" class="mt-4">
+            <div th:if="${library.tags != null && !library.tags.isEmpty()}" class="mt-4">
                 <p class="text-xs font-semibold text-secondary uppercase tracking-wide mb-2">Tags</p>
                 <div class="tags">
-                    <span th:each="tag : ${library.tags()}"
+                    <span th:each="tag : ${library.tags}"
                           class="tag"
                           th:text="${tag}">tag</span>
                 </div>
@@ -71,7 +71,7 @@
                 <button type="button"
                         class="btn btn-primary"
                         @click="openModal()"
-                        th:data-library-id="${library.id()}">
+                        th:data-library-id="${library.id}">
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                               d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
@@ -104,40 +104,40 @@
                 <tbody>
                     <tr th:each="version, iterStat : ${versions}">
                         <td>
-                            <span th:text="${version.version()}" class="font-mono font-medium">1.0.0</span>
-                            <span th:if="${version.isLatest()}" class="ml-2 badge badge-success">Latest</span>
-                            <span th:if="${version.isLts()}" class="ml-2 badge badge-info">LTS</span>
+                            <span th:text="${version.version}" class="font-mono font-medium">1.0.0</span>
+                            <span th:if="${version.isLatest}" class="ml-2 badge badge-success">Latest</span>
+                            <span th:if="${version.isLts}" class="ml-2 badge badge-info">LTS</span>
                         </td>
                         <td>
-                            <span th:switch="${version.status().name()}">
+                            <span th:switch="${version.status.name}">
                                 <span th:case="'ACTIVE'" class="badge badge-success">Active</span>
                                 <span th:case="'DEPRECATED'" class="badge badge-warning">Deprecated</span>
                                 <span th:case="'EOL'" class="badge badge-danger">EOL</span>
                             </span>
                         </td>
-                        <td class="text-sm text-secondary font-mono" th:text="${version.docsPath()} ?: '-'">docs/</td>
+                        <td class="text-sm text-secondary font-mono" th:text="${version.docsPath} ?: '-'">docs/</td>
                         <td>
                             <span th:if="${syncStatuses[__${iterStat.index}__] != null}">
-                                <span th:switch="${syncStatuses[__${iterStat.index}__].status().name()}">
+                                <span th:switch="${syncStatuses[__${iterStat.index}__].status.name}">
                                     <span th:case="'SUCCESS'" class="text-success">Success</span>
                                     <span th:case="'RUNNING'" class="text-accent">Running</span>
                                     <span th:case="'FAILED'" class="text-error">Failed</span>
                                     <span th:case="'PENDING'" class="text-warning">Pending</span>
                                 </span>
                                 <span class="text-xs text-tertiary ml-2"
-                                      th:text="${#temporals.format(syncStatuses[__${iterStat.index}__].startedAt(), 'MM-dd HH:mm')}">-</span>
+                                      th:text="${#temporals.format(syncStatuses[__${iterStat.index}__].startedAt, 'MM-dd HH:mm')}">-</span>
                             </span>
                             <span th:if="${syncStatuses[__${iterStat.index}__] == null}" class="text-tertiary">Never</span>
                         </td>
                         <td class="space-x-2">
-                            <a th:href="@{/documents(versionId=${version.id()})}"
+                            <a th:href="@{/documents(versionId=${version.id})}"
                                class="text-sm text-accent">
                                 Browse Docs
                             </a>
                             <button type="button"
                                     class="text-sm text-accent"
-                                    th:data-sync-library="${library.id()}"
-                                    th:data-version="${version.version()}">
+                                    th:data-sync-library="${library.id}"
+                                    th:data-version="${version.version}">
                                 Sync
                             </button>
                         </td>

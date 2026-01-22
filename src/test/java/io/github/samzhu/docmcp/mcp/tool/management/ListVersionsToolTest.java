@@ -14,7 +14,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.UUID;
+
+import com.github.f4b6a3.tsid.TsidCreator;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -40,7 +41,7 @@ class ListVersionsToolTest {
     @DisplayName("應回傳指定函式庫的所有版本（包含棄用）")
     void shouldReturnAllVersionsForLibrary() {
         // Arrange
-        var libraryId = UUID.randomUUID();
+        var libraryId = randomId();
         var library = createLibrary(libraryId, "spring-boot", "Spring Boot");
         var versions = List.of(
                 createVersion(libraryId, "3.2.0", true, VersionStatus.ACTIVE),
@@ -52,10 +53,10 @@ class ListVersionsToolTest {
         when(libraryService.getLibraryVersionsById(libraryId)).thenReturn(versions);
 
         // Act - 使用 includeDeprecated=true 來取得所有版本
-        var result = listVersionsTool.listVersions(libraryId.toString(), true);
+        var result = listVersionsTool.listVersions(libraryId, true);
 
         // Assert
-        assertThat(result.libraryId()).isEqualTo(libraryId.toString());
+        assertThat(result.libraryId()).isEqualTo(libraryId);
         assertThat(result.libraryName()).isEqualTo("spring-boot");
         assertThat(result.versions()).hasSize(3);
         assertThat(result.total()).isEqualTo(3);
@@ -65,7 +66,7 @@ class ListVersionsToolTest {
     @DisplayName("應只回傳非棄用版本（當 includeDeprecated 為 false）")
     void shouldExcludeDeprecatedVersionsWhenFlagIsFalse() {
         // Arrange
-        var libraryId = UUID.randomUUID();
+        var libraryId = randomId();
         var library = createLibrary(libraryId, "spring-boot", "Spring Boot");
         var versions = List.of(
                 createVersion(libraryId, "3.2.0", true, VersionStatus.ACTIVE),
@@ -78,7 +79,7 @@ class ListVersionsToolTest {
         when(libraryService.getLibraryVersionsById(libraryId)).thenReturn(versions);
 
         // Act
-        var result = listVersionsTool.listVersions(libraryId.toString(), false);
+        var result = listVersionsTool.listVersions(libraryId, false);
 
         // Assert
         assertThat(result.versions()).hasSize(2);
@@ -90,7 +91,7 @@ class ListVersionsToolTest {
     @DisplayName("應回傳包含棄用版本（當 includeDeprecated 為 true）")
     void shouldIncludeDeprecatedVersionsWhenFlagIsTrue() {
         // Arrange
-        var libraryId = UUID.randomUUID();
+        var libraryId = randomId();
         var library = createLibrary(libraryId, "spring-boot", "Spring Boot");
         var versions = List.of(
                 createVersion(libraryId, "3.2.0", true, VersionStatus.ACTIVE),
@@ -102,7 +103,7 @@ class ListVersionsToolTest {
         when(libraryService.getLibraryVersionsById(libraryId)).thenReturn(versions);
 
         // Act
-        var result = listVersionsTool.listVersions(libraryId.toString(), true);
+        var result = listVersionsTool.listVersions(libraryId, true);
 
         // Assert
         assertThat(result.versions()).hasSize(3);
@@ -113,7 +114,7 @@ class ListVersionsToolTest {
     @DisplayName("當 includeDeprecated 為 null 時應使用預設值 false")
     void shouldUseDefaultValueWhenIncludeDeprecatedIsNull() {
         // Arrange
-        var libraryId = UUID.randomUUID();
+        var libraryId = randomId();
         var library = createLibrary(libraryId, "react", "React");
         var versions = List.of(
                 createVersion(libraryId, "18.2.0", true, VersionStatus.ACTIVE),
@@ -124,7 +125,7 @@ class ListVersionsToolTest {
         when(libraryService.getLibraryVersionsById(libraryId)).thenReturn(versions);
 
         // Act
-        var result = listVersionsTool.listVersions(libraryId.toString(), null);
+        var result = listVersionsTool.listVersions(libraryId, null);
 
         // Assert
         assertThat(result.versions()).hasSize(1);
@@ -135,12 +136,12 @@ class ListVersionsToolTest {
     @DisplayName("當函式庫不存在時應拋出例外")
     void shouldThrowExceptionWhenLibraryNotFound() {
         // Arrange
-        var libraryId = UUID.randomUUID();
+        var libraryId = randomId();
         when(libraryService.getLibraryById(libraryId))
                 .thenThrow(LibraryNotFoundException.byId(libraryId));
 
         // Act & Assert
-        assertThatThrownBy(() -> listVersionsTool.listVersions(libraryId.toString(), false))
+        assertThatThrownBy(() -> listVersionsTool.listVersions(libraryId, false))
                 .isInstanceOf(LibraryNotFoundException.class);
     }
 
@@ -148,27 +149,32 @@ class ListVersionsToolTest {
     @DisplayName("當函式庫沒有版本時應回傳空列表")
     void shouldReturnEmptyListWhenNoVersions() {
         // Arrange
-        var libraryId = UUID.randomUUID();
+        var libraryId = randomId();
         var library = createLibrary(libraryId, "new-lib", "New Library");
 
         when(libraryService.getLibraryById(libraryId)).thenReturn(library);
         when(libraryService.getLibraryVersionsById(libraryId)).thenReturn(List.of());
 
         // Act
-        var result = listVersionsTool.listVersions(libraryId.toString(), false);
+        var result = listVersionsTool.listVersions(libraryId, false);
 
         // Assert
         assertThat(result.versions()).isEmpty();
         assertThat(result.total()).isEqualTo(0);
     }
 
-    private Library createLibrary(UUID id, String name, String displayName) {
-        return new Library(id, name, displayName, null, null, null, null, null, null, null);
+    // 產生隨機 ID 的輔助方法
+    private String randomId() {
+        return TsidCreator.getTsid().toString();
     }
 
-    private LibraryVersion createVersion(UUID libraryId, String version, boolean isLatest, VersionStatus status) {
+    private Library createLibrary(String id, String name, String displayName) {
+        return new Library(id, name, displayName, null, null, null, null, null, null, null, null);
+    }
+
+    private LibraryVersion createVersion(String libraryId, String version, boolean isLatest, VersionStatus status) {
         return new LibraryVersion(
-                UUID.randomUUID(),
+                randomId(),
                 libraryId,
                 version,
                 isLatest,
@@ -176,6 +182,7 @@ class ListVersionsToolTest {
                 status,
                 null,
                 LocalDate.now(),
+                null,  // entityVersion
                 null,
                 null
         );

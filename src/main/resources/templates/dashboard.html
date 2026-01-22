@@ -81,16 +81,16 @@
                 </thead>
                 <tbody>
                     <tr th:each="sync : ${recentSyncs}">
-                        <td class="font-mono text-sm" th:text="${#strings.abbreviate(sync.versionId().toString(), 12)}">...</td>
+                        <td class="font-mono text-sm" th:text="${#strings.abbreviate(sync.versionId.toString(), 12)}">...</td>
                         <td>
-                            <span th:if="${sync.status().name() == 'SUCCESS'}" class="badge badge-success">Success</span>
-                            <span th:if="${sync.status().name() == 'RUNNING'}" class="badge badge-info">Running</span>
-                            <span th:if="${sync.status().name() == 'FAILED'}" class="badge badge-danger">Failed</span>
-                            <span th:if="${sync.status().name() == 'PENDING'}" class="badge badge-warning">Pending</span>
+                            <span th:if="${sync.status.name == 'SUCCESS'}" class="badge badge-success">Success</span>
+                            <span th:if="${sync.status.name == 'RUNNING'}" class="badge badge-info">Running</span>
+                            <span th:if="${sync.status.name == 'FAILED'}" class="badge badge-danger">Failed</span>
+                            <span th:if="${sync.status.name == 'PENDING'}" class="badge badge-warning">Pending</span>
                         </td>
-                        <td th:text="${sync.documentsProcessed()}">0</td>
-                        <td th:text="${sync.chunksCreated()}">0</td>
-                        <td th:text="${#temporals.format(sync.startedAt(), 'yyyy-MM-dd HH:mm')}">-</td>
+                        <td th:text="${sync.documentsProcessed}">0</td>
+                        <td th:text="${sync.chunksCreated}">0</td>
+                        <td th:text="${#temporals.format(sync.startedAt, 'yyyy-MM-dd HH:mm')}">-</td>
                     </tr>
                 </tbody>
             </table>

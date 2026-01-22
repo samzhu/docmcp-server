@@ -32,13 +32,13 @@ public record LibraryVersionDto(
      */
     public static LibraryVersionDto from(LibraryVersion libraryVersion) {
         return new LibraryVersionDto(
-                libraryVersion.id() != null ? libraryVersion.id().toString() : null,
-                libraryVersion.version(),
-                libraryVersion.isLatest() != null && libraryVersion.isLatest(),
-                libraryVersion.isLts() != null && libraryVersion.isLts(),
-                libraryVersion.status() != null ? libraryVersion.status().name() : null,
-                libraryVersion.docsPath(),
-                libraryVersion.releaseDate()
+                libraryVersion.getId(),
+                libraryVersion.getVersion(),
+                libraryVersion.getIsLatest() != null && libraryVersion.getIsLatest(),
+                libraryVersion.getIsLts() != null && libraryVersion.getIsLts(),
+                libraryVersion.getStatus() != null ? libraryVersion.getStatus().name() : null,
+                libraryVersion.getDocsPath(),
+                libraryVersion.getReleaseDate()
         );
     }
 }

@@ -1,5 +1,6 @@
 package io.github.samzhu.docmcp.web.api;
 
+import com.github.f4b6a3.tsid.TsidCreator;
 import io.github.samzhu.docmcp.TestConfig;
 import io.github.samzhu.docmcp.TestcontainersConfiguration;
 import io.github.samzhu.docmcp.domain.enums.SyncStatus;
@@ -21,7 +22,6 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -43,6 +43,13 @@ class SyncApiControllerTest {
     private WebApplicationContext webApplicationContext;
 
     private MockMvc mockMvc;
+
+    /**
+     * 產生隨機 ID
+     */
+    private String randomId() {
+        return TsidCreator.getTsid().toString();
+    }
 
     @BeforeEach
     void setUp() {
@@ -74,14 +81,14 @@ class SyncApiControllerTest {
     @Test
     @WithMockUser
     void shouldGetSyncHistoryByVersionId() throws Exception {
-        var versionId = UUID.randomUUID();
+        var versionId = randomId();
         var histories = List.of(
                 createSyncHistoryWithVersionId(versionId, SyncStatus.SUCCESS, 10, 50)
         );
         when(syncService.getSyncHistory(eq(versionId), eq(10))).thenReturn(histories);
 
         mockMvc.perform(get("/api/sync/history")
-                        .param("versionId", versionId.toString()))
+                        .param("versionId", versionId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(1));
     }
@@ -102,7 +109,7 @@ class SyncApiControllerTest {
     @Test
     @WithMockUser
     void shouldGetSyncStatusById() throws Exception {
-        var syncId = UUID.randomUUID();
+        var syncId = randomId();
         var history = createSyncHistory(SyncStatus.SUCCESS, 15, 75);
         when(syncService.getSyncStatus(syncId)).thenReturn(Optional.of(history));
 
@@ -116,7 +123,7 @@ class SyncApiControllerTest {
     @Test
     @WithMockUser
     void shouldReturn404WhenSyncStatusNotFound() throws Exception {
-        var syncId = UUID.randomUUID();
+        var syncId = randomId();
         when(syncService.getSyncStatus(syncId)).thenReturn(Optional.empty());
 
         mockMvc.perform(get("/api/sync/{id}", syncId))
@@ -126,17 +133,21 @@ class SyncApiControllerTest {
     @Test
     @WithMockUser
     void shouldShowErrorMessageForFailedSync() throws Exception {
-        var syncId = UUID.randomUUID();
+        var syncId = randomId();
+        var now = OffsetDateTime.now();
         var history = new SyncHistory(
                 syncId,
-                UUID.randomUUID(),
+                randomId(),
                 SyncStatus.FAILED,
-                OffsetDateTime.now().minusMinutes(5),
-                OffsetDateTime.now(),
+                now.minusMinutes(5),
+                now,
                 5,
                 20,
                 "Connection timeout",
-                Map.of()
+                Map.of(),
+                0L,                    // version（模擬從資料庫讀取）
+                now.minusMinutes(5),   // createdAt
+                now                    // updatedAt
         );
         when(syncService.getSyncStatus(syncId)).thenReturn(Optional.of(history));
 
@@ -147,31 +158,39 @@ class SyncApiControllerTest {
     }
 
     private SyncHistory createSyncHistory(SyncStatus status, int docsProcessed, int chunksCreated) {
+        var now = OffsetDateTime.now();
         return new SyncHistory(
-                UUID.randomUUID(),
-                UUID.randomUUID(),
+                randomId(),
+                randomId(),
                 status,
-                OffsetDateTime.now().minusMinutes(10),
-                status == SyncStatus.RUNNING ? null : OffsetDateTime.now(),
+                now.minusMinutes(10),
+                status == SyncStatus.RUNNING ? null : now,
                 docsProcessed,
                 chunksCreated,
                 null,
-                Map.of()
+                Map.of(),
+                0L,                     // version（模擬從資料庫讀取）
+                now.minusMinutes(10),   // createdAt
+                now                     // updatedAt
         );
     }
 
-    private SyncHistory createSyncHistoryWithVersionId(UUID versionId, SyncStatus status,
+    private SyncHistory createSyncHistoryWithVersionId(String versionId, SyncStatus status,
                                                         int docsProcessed, int chunksCreated) {
+        var now = OffsetDateTime.now();
         return new SyncHistory(
-                UUID.randomUUID(),
+                randomId(),
                 versionId,
                 status,
-                OffsetDateTime.now().minusMinutes(10),
-                OffsetDateTime.now(),
+                now.minusMinutes(10),
+                now,
                 docsProcessed,
                 chunksCreated,
                 null,
-                Map.of()
+                Map.of(),
+                0L,                     // version（模擬從資料庫讀取）
+                now.minusMinutes(10),   // createdAt
+                now                     // updatedAt
         );
     }
 }

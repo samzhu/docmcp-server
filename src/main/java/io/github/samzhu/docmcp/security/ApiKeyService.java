@@ -3,6 +3,7 @@ package io.github.samzhu.docmcp.security;
 import io.github.samzhu.docmcp.domain.enums.ApiKeyStatus;
 import io.github.samzhu.docmcp.domain.model.ApiKey;
 import io.github.samzhu.docmcp.repository.ApiKeyRepository;
+import io.github.samzhu.docmcp.service.IdService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -13,7 +14,6 @@ import java.time.OffsetDateTime;
 import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
 
 /**
  * API Key 服務
@@ -29,11 +29,13 @@ public class ApiKeyService {
     private static final int KEY_LENGTH = 32;
     private static final int DEFAULT_RATE_LIMIT = 1000;
 
+    private final IdService idService;
     private final ApiKeyRepository apiKeyRepository;
     private final PasswordEncoder passwordEncoder;
     private final SecureRandom secureRandom;
 
-    public ApiKeyService(ApiKeyRepository apiKeyRepository) {
+    public ApiKeyService(IdService idService, ApiKeyRepository apiKeyRepository) {
+        this.idService = idService;
         this.apiKeyRepository = apiKeyRepository;
         this.passwordEncoder = new BCryptPasswordEncoder();
         this.secureRandom = new SecureRandom();
@@ -73,13 +75,16 @@ public class ApiKeyService {
         String keyPrefix = rawKey.substring(0, 12);  // dmcp_xxxxxxxx
         String keyHash = passwordEncoder.encode(rawKey);
 
+        // 使用 IdService 生成 TSID
+        String id = idService.generateId();
+
         // 儲存金鑰
-        ApiKey apiKey = ApiKey.create(name, keyHash, keyPrefix,
+        ApiKey apiKey = ApiKey.create(id, name, keyHash, keyPrefix,
                 rateLimit != null ? rateLimit : DEFAULT_RATE_LIMIT,
                 expiresAt, createdBy);
         apiKey = apiKeyRepository.save(apiKey);
 
-        return new GeneratedApiKey(apiKey.id(), name, rawKey, keyPrefix);
+        return new GeneratedApiKey(apiKey.getId(), name, rawKey, keyPrefix);
     }
 
     /**
@@ -109,7 +114,7 @@ public class ApiKeyService {
         }
 
         // 驗證雜湊
-        if (!passwordEncoder.matches(rawKey, apiKey.keyHash())) {
+        if (!passwordEncoder.matches(rawKey, apiKey.getKeyHash())) {
             return Optional.empty();
         }
 
@@ -130,10 +135,10 @@ public class ApiKeyService {
     /**
      * 撤銷 API Key
      *
-     * @param keyId 金鑰 ID
+     * @param keyId 金鑰 ID（TSID 格式）
      */
     @Transactional
-    public void revokeKey(UUID keyId) {
+    public void revokeKey(String keyId) {
         ApiKey apiKey = apiKeyRepository.findById(keyId)
                 .orElseThrow(() -> new IllegalArgumentException("找不到 API Key: " + keyId));
 
@@ -152,10 +157,10 @@ public class ApiKeyService {
     /**
      * 根據 ID 取得 API Key
      *
-     * @param id 金鑰 ID
+     * @param id 金鑰 ID（TSID 格式）
      * @return API Key（若存在）
      */
-    public Optional<ApiKey> getKeyById(UUID id) {
+    public Optional<ApiKey> getKeyById(String id) {
         return apiKeyRepository.findById(id);
     }
 
@@ -181,13 +186,13 @@ public class ApiKeyService {
     /**
      * 生成的 API Key 結果
      *
-     * @param id        金鑰 ID
+     * @param id        金鑰 ID（TSID 格式）
      * @param name      名稱
      * @param rawKey    原始金鑰（只會顯示一次）
      * @param keyPrefix 金鑰前綴
      */
     public record GeneratedApiKey(
-            UUID id,
+            String id,
             String name,
             String rawKey,
             String keyPrefix

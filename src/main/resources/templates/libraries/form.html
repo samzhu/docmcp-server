@@ -20,7 +20,7 @@
 
             <form id="library-form"
                   th:data-mode="${mode}"
-                  th:data-library-id="${library?.id()}">
+                  th:data-library-id="${library?.id}">
 
                 <div class="space-y-6">
                     <!-- Name -->
@@ -33,7 +33,7 @@
                                placeholder="e.g., spring-boot"
                                pattern="^[a-z0-9-]+$"
                                required
-                               th:value="${library?.name()}"
+                               th:value="${library?.name}"
                                th:readonly="${mode == 'edit'}">
                         <p class="text-xs text-secondary mt-1">Only lowercase letters, numbers, and hyphens</p>
                     </div>
@@ -47,7 +47,7 @@
                                class="form-input"
                                placeholder="e.g., Spring Boot"
                                required
-                               th:value="${library?.displayName()}">
+                               th:value="${library?.displayName}">
                     </div>
 
                     <!-- Description -->
@@ -58,7 +58,7 @@
                                   class="form-input"
                                   rows="3"
                                   placeholder="Brief description of the library"
-                                  th:text="${library?.description()}"></textarea>
+                                  th:text="${library?.description}"></textarea>
                     </div>
 
                     <!-- Source Type -->
@@ -68,7 +68,7 @@
                             <option th:each="type : ${sourceTypes}"
                                     th:value="${type}"
                                     th:text="${type}"
-                                    th:selected="${library?.sourceType() == type}">TYPE</option>
+                                    th:selected="${library?.sourceType == type}">TYPE</option>
                         </select>
                     </div>
 
@@ -80,7 +80,7 @@
                                name="sourceUrl"
                                class="form-input"
                                placeholder="https://github.com/owner/repo"
-                               th:value="${library?.sourceUrl()}">
+                               th:value="${library?.sourceUrl}">
                         <p class="text-xs text-secondary mt-1">GitHub repository URL for automatic sync</p>
                     </div>
 
@@ -92,7 +92,7 @@
                                name="category"
                                class="form-input"
                                placeholder="e.g., backend, frontend, database"
-                               th:value="${library?.category()}">
+                               th:value="${library?.category}">
                     </div>
 
                     <!-- Tags -->
@@ -103,7 +103,7 @@
                                name="tags"
                                class="form-input"
                                placeholder="java, framework, spring (comma-separated)"
-                               th:value="${library?.tags() != null ? #strings.listJoin(library.tags(), ', ') : ''}">
+                               th:value="${library?.tags != null ? #strings.listJoin(library.tags, ', ') : ''}">
                     </div>
                 </div>
 

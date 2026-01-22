@@ -7,25 +7,25 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
-import java.util.UUID;
 
 /**
  * 程式碼範例資料存取介面
  * <p>
  * 提供程式碼範例的 CRUD 操作及自訂查詢方法。
+ * ID 類型為 TSID 字串。
  * </p>
  */
 @Repository
-public interface CodeExampleRepository extends CrudRepository<CodeExample, UUID> {
+public interface CodeExampleRepository extends CrudRepository<CodeExample, String> {
 
     /**
      * 取得指定文件的所有程式碼範例
      *
-     * @param documentId 文件 ID
+     * @param documentId 文件 ID（TSID 格式）
      * @return 程式碼範例列表
      */
     @Query("SELECT * FROM code_examples WHERE document_id = :documentId ORDER BY start_line")
-    List<CodeExample> findByDocumentId(@Param("documentId") UUID documentId);
+    List<CodeExample> findByDocumentId(@Param("documentId") String documentId);
 
     /**
      * 依函式庫和語言查詢程式碼範例
@@ -33,7 +33,7 @@ public interface CodeExampleRepository extends CrudRepository<CodeExample, UUID>
      * 可指定版本和程式語言進行篩選，依建立時間降序排列。
      * </p>
      *
-     * @param libraryId 函式庫 ID
+     * @param libraryId 函式庫 ID（TSID 格式）
      * @param version   版本（可為 null 表示最新版本）
      * @param language  程式語言（可為 null 表示不限語言）
      * @param limit     結果數量上限
@@ -50,7 +50,7 @@ public interface CodeExampleRepository extends CrudRepository<CodeExample, UUID>
             LIMIT :limit
             """)
     List<CodeExample> findByLibraryAndLanguage(
-            @Param("libraryId") UUID libraryId,
+            @Param("libraryId") String libraryId,
             @Param("version") String version,
             @Param("language") String language,
             @Param("limit") int limit
@@ -59,7 +59,7 @@ public interface CodeExampleRepository extends CrudRepository<CodeExample, UUID>
     /**
      * 取得指定函式庫中所有可用的程式語言
      *
-     * @param libraryId 函式庫 ID
+     * @param libraryId 函式庫 ID（TSID 格式）
      * @param version   版本（可為 null）
      * @return 程式語言列表
      */
@@ -72,7 +72,7 @@ public interface CodeExampleRepository extends CrudRepository<CodeExample, UUID>
             ORDER BY ce.language
             """)
     List<String> findDistinctLanguagesByLibrary(
-            @Param("libraryId") UUID libraryId,
+            @Param("libraryId") String libraryId,
             @Param("version") String version
     );
 }

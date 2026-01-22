@@ -12,13 +12,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -79,20 +76,20 @@ public class SearchService {
      * 在文件標題和內容中搜尋關鍵字。
      * </p>
      *
-     * @param libraryId 函式庫 ID
+     * @param libraryId 函式庫 ID（TSID 格式）
      * @param version   版本（可選，null 表示最新版本）
      * @param query     搜尋關鍵字
      * @param limit     結果數量上限
      * @return 搜尋結果列表
      */
-    public List<SearchResultItem> fullTextSearch(UUID libraryId, String version,
+    public List<SearchResultItem> fullTextSearch(String libraryId, String version,
                                                   String query, int limit) {
         if (query == null || query.isBlank()) {
             return List.of();
         }
 
         // 解析版本
-        UUID versionId = resolveVersionId(libraryId, version);
+        String versionId = resolveVersionId(libraryId, version);
         if (versionId == null) {
             return List.of();
         }
@@ -103,10 +100,10 @@ public class SearchService {
         // 轉換為搜尋結果
         return documents.stream()
                 .map(doc -> SearchResultItem.fromDocument(
-                        doc.id(),
-                        doc.title(),
-                        doc.path(),
-                        truncateContent(doc.content(), 500),
+                        doc.getId(),
+                        doc.getTitle(),
+                        doc.getPath(),
+                        truncateContent(doc.getContent(), 500),
                         1.0  // 全文檢索不回傳分數，使用預設值
                 ))
                 .toList();
@@ -119,21 +116,21 @@ public class SearchService {
      * 將查詢文字轉換為向量後，搜尋相似的文件區塊。
      * </p>
      *
-     * @param libraryId 函式庫 ID
+     * @param libraryId 函式庫 ID（TSID 格式）
      * @param version   版本（可選，null 表示最新版本）
      * @param query     自然語言查詢
      * @param limit     結果數量上限
      * @param threshold 相似度閾值（0-1，越高越嚴格）
      * @return 搜尋結果列表
      */
-    public List<SearchResultItem> semanticSearch(UUID libraryId, String version,
+    public List<SearchResultItem> semanticSearch(String libraryId, String version,
                                                   String query, int limit, double threshold) {
         if (query == null || query.isBlank()) {
             return List.of();
         }
 
         // 解析版本
-        UUID versionId = resolveVersionId(libraryId, version);
+        String versionId = resolveVersionId(libraryId, version);
         if (versionId == null) {
             return List.of();
         }
@@ -144,7 +141,7 @@ public class SearchService {
                 .query(query)
                 .topK(limit)
                 .similarityThreshold(threshold)
-                .filterExpression(METADATA_VERSION_ID + " == '" + versionId.toString() + "'")
+                .filterExpression(METADATA_VERSION_ID + " == '" + versionId + "'")
                 .build();
 
         List<org.springframework.ai.document.Document> results = vectorStore.similaritySearch(request);
@@ -154,18 +151,18 @@ public class SearchService {
         }
 
         // 從結果中取得 document IDs 並批次查詢文件資訊
-        List<UUID> documentIds = results.stream()
+        List<String> documentIds = results.stream()
                 .map(doc -> {
                     Object docIdObj = doc.getMetadata().get(METADATA_DOCUMENT_ID);
-                    return docIdObj != null ? parseUuid(docIdObj.toString()) : null;
+                    return docIdObj != null ? docIdObj.toString() : null;
                 })
                 .filter(id -> id != null)
                 .distinct()
                 .toList();
 
-        Map<UUID, Document> documentMap = StreamSupport.stream(
+        Map<String, Document> documentMap = StreamSupport.stream(
                         documentRepository.findAllById(documentIds).spliterator(), false)
-                .collect(Collectors.toMap(Document::id, Function.identity()));
+                .collect(Collectors.toMap(Document::getId, Function.identity()));
 
         // 轉換為搜尋結果
         return results.stream()
@@ -178,11 +175,11 @@ public class SearchService {
      * 將 Spring AI Document 轉換為 SearchResultItem
      */
     private SearchResultItem toSearchResultItem(org.springframework.ai.document.Document doc,
-                                                 Map<UUID, Document> documentMap) {
+                                                 Map<String, Document> documentMap) {
         Map<String, Object> metadata = doc.getMetadata();
 
         // 取得 document ID
-        UUID documentId = parseUuid(getMetadataString(metadata, METADATA_DOCUMENT_ID));
+        String documentId = getMetadataString(metadata, METADATA_DOCUMENT_ID);
         if (documentId == null) {
             return null;
         }
@@ -194,15 +191,15 @@ public class SearchService {
         }
 
         // 取得 chunk ID 和其他資訊
-        UUID chunkId = parseUuid(doc.getId());
+        String chunkId = doc.getId();
         int chunkIndex = getMetadataInt(metadata, METADATA_CHUNK_INDEX, 0);
         double score = getMetadataDouble(metadata, "score", 0.0);
 
         return SearchResultItem.fromChunk(
-                dbDoc.id(),
+                dbDoc.getId(),
                 chunkId,
-                dbDoc.title(),
-                dbDoc.path(),
+                dbDoc.getTitle(),
+                dbDoc.getPath(),
                 doc.getText(),
                 score,
                 chunkIndex
@@ -257,30 +254,16 @@ public class SearchService {
     }
 
     /**
-     * 解析 UUID 字串
-     */
-    private UUID parseUuid(String str) {
-        if (str == null || str.isBlank()) {
-            return null;
-        }
-        try {
-            return UUID.fromString(str);
-        } catch (IllegalArgumentException e) {
-            return null;
-        }
-    }
-
-    /**
      * 解析版本 ID
      */
-    private UUID resolveVersionId(UUID libraryId, String version) {
+    private String resolveVersionId(String libraryId, String version) {
         if (version != null && !version.isBlank()) {
             return versionRepository.findByLibraryIdAndVersion(libraryId, version)
-                    .map(v -> v.id())
+                    .map(v -> v.getId())
                     .orElse(null);
         } else {
             return versionRepository.findLatestByLibraryId(libraryId)
-                    .map(v -> v.id())
+                    .map(v -> v.getId())
                     .orElse(null);
         }
     }
@@ -307,13 +290,13 @@ public class SearchService {
      * final_score = alpha × keyword_rrf + (1 - alpha) × semantic_rrf
      * </p>
      *
-     * @param libraryId 函式庫 ID
+     * @param libraryId 函式庫 ID（TSID 格式）
      * @param version   版本（可選，null 表示最新版本）
      * @param query     搜尋查詢
      * @param limit     結果數量上限
      * @return 融合後的搜尋結果列表（依 RRF 分數排序）
      */
-    public List<SearchResultItem> hybridSearch(UUID libraryId, String version,
+    public List<SearchResultItem> hybridSearch(String libraryId, String version,
                                                 String query, int limit) {
         return hybridSearch(libraryId, version, query, limit, hybridAlpha, minSimilarity);
     }
@@ -321,7 +304,7 @@ public class SearchService {
     /**
      * 混合搜尋（使用自訂參數）
      *
-     * @param libraryId      函式庫 ID
+     * @param libraryId      函式庫 ID（TSID 格式）
      * @param version        版本（可選，null 表示最新版本）
      * @param query          搜尋查詢
      * @param limit          結果數量上限
@@ -329,7 +312,7 @@ public class SearchService {
      * @param minSimilarity  語意搜尋最低相似度閾值
      * @return 融合後的搜尋結果列表（依 RRF 分數排序）
      */
-    public List<SearchResultItem> hybridSearch(UUID libraryId, String version,
+    public List<SearchResultItem> hybridSearch(String libraryId, String version,
                                                 String query, int limit,
                                                 double alpha, double minSimilarity) {
         if (query == null || query.isBlank()) {
@@ -428,9 +411,9 @@ public class SearchService {
      */
     private String getResultKey(SearchResultItem item) {
         if (item.chunkId() != null) {
-            return "chunk:" + item.chunkId().toString();
+            return "chunk:" + item.chunkId();
         }
-        return "doc:" + item.documentId().toString();
+        return "doc:" + item.documentId();
     }
 
     /**

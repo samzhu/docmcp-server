@@ -30,12 +30,12 @@ public record LibraryDto(
      */
     public static LibraryDto from(Library library) {
         return new LibraryDto(
-                library.id() != null ? library.id().toString() : null,
-                library.name(),
-                library.displayName(),
-                library.description(),
-                library.category(),
-                library.tags()
+                library.getId(),
+                library.getName(),
+                library.getDisplayName(),
+                library.getDescription(),
+                library.getCategory(),
+                library.getTags()
         );
     }
 }

@@ -11,7 +11,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
-import java.util.UUID;
 
 /**
  * 同步狀態 REST API
@@ -32,19 +31,19 @@ public class SyncApiController {
     /**
      * 取得同步歷史
      *
-     * @param libraryId 函式庫 ID（可選，用於查詢特定函式庫的版本）
-     * @param versionId 版本 ID（可選，直接指定版本）
+     * @param libraryId 函式庫 ID（可選，用於查詢特定函式庫的版本，TSID 格式）
+     * @param versionId 版本 ID（可選，直接指定版本，TSID 格式）
      * @param limit     結果數量上限（預設 10）
      * @return 同步歷史列表
      */
     @GetMapping("/history")
     public List<SyncHistoryDto> getSyncHistory(
-            @RequestParam(required = false) UUID libraryId,
-            @RequestParam(required = false) UUID versionId,
+            @RequestParam(required = false) String libraryId,
+            @RequestParam(required = false) String versionId,
             @RequestParam(defaultValue = "10") int limit
     ) {
         // 如果指定了 versionId，直接使用；否則查詢所有
-        UUID targetVersionId = versionId;
+        String targetVersionId = versionId;
 
         List<SyncHistory> histories = syncService.getSyncHistory(targetVersionId, limit);
 
@@ -56,11 +55,11 @@ public class SyncApiController {
     /**
      * 取得單一同步記錄
      *
-     * @param id 同步 ID
+     * @param id 同步 ID（TSID 格式）
      * @return 同步歷史
      */
     @GetMapping("/{id}")
-    public ResponseEntity<SyncHistoryDto> getSyncStatus(@PathVariable UUID id) {
+    public ResponseEntity<SyncHistoryDto> getSyncStatus(@PathVariable String id) {
         return syncService.getSyncStatus(id)
                 .map(SyncHistoryDto::from)
                 .map(ResponseEntity::ok)

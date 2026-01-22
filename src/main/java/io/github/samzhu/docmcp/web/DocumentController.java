@@ -14,7 +14,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.UUID;
 
 /**
  * 文件瀏覽頁面控制器
@@ -41,22 +40,22 @@ public class DocumentController {
     /**
      * 文件列表頁面
      *
-     * @param versionId 版本 ID（可選，若未提供則重導向至 Libraries 頁面）
+     * @param versionId 版本 ID（可選，若未提供則重導向至 Libraries 頁面，TSID 格式）
      * @param model     Model
      * @return 視圖名稱
      */
     @GetMapping
-    public String list(@RequestParam(required = false) UUID versionId, Model model) {
+    public String list(@RequestParam(required = false) String versionId, Model model) {
         // 若未提供 versionId，重導向至 Libraries 頁面讓用戶選擇版本
-        if (versionId == null) {
+        if (versionId == null || versionId.isBlank()) {
             return "redirect:/libraries";
         }
 
         var version = libraryService.getVersionById(versionId);
-        var library = libraryService.getLibraryById(version.libraryId());
+        var library = libraryService.getLibraryById(version.getLibraryId());
         var documents = documentRepository.findByVersionIdOrderByPathAsc(versionId);
 
-        model.addAttribute("pageTitle", "Documents - " + library.displayName() + " " + version.version());
+        model.addAttribute("pageTitle", "Documents - " + library.getDisplayName() + " " + version.getVersion());
         model.addAttribute("currentPage", "documents");
         model.addAttribute("library", library);
         model.addAttribute("version", version);
@@ -68,19 +67,19 @@ public class DocumentController {
     /**
      * 文件詳情頁面
      *
-     * @param id    文件 ID
+     * @param id    文件 ID（TSID 格式）
      * @param model Model
      * @return 視圖名稱
      */
     @GetMapping("/{id}")
-    public String detail(@PathVariable UUID id, Model model) {
+    public String detail(@PathVariable String id, Model model) {
         Document document = documentService.getDocument(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Document not found"));
 
-        LibraryVersion version = libraryService.getVersionById(document.versionId());
-        var library = libraryService.getLibraryById(version.libraryId());
+        LibraryVersion version = libraryService.getVersionById(document.getVersionId());
+        var library = libraryService.getLibraryById(version.getLibraryId());
 
-        model.addAttribute("pageTitle", document.title());
+        model.addAttribute("pageTitle", document.getTitle());
         model.addAttribute("currentPage", "documents");
         model.addAttribute("library", library);
         model.addAttribute("version", version);

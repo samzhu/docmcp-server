@@ -8,7 +8,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
-import java.util.UUID;
+
+import com.github.f4b6a3.tsid.TsidCreator;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
@@ -32,10 +33,10 @@ class SearchDocsToolTest {
     @DisplayName("should search docs with default limit")
     void shouldSearchDocsWithDefaultLimit() {
         // Arrange
-        UUID libraryId = UUID.randomUUID();
+        String libraryId = randomId();
         String query = "spring boot";
         var expectedResults = List.of(
-                SearchResultItem.fromDocument(UUID.randomUUID(), "Getting Started",
+                SearchResultItem.fromDocument(randomId(), "Getting Started",
                         "/docs/getting-started.md", "Content...", 1.0)
         );
 
@@ -56,7 +57,7 @@ class SearchDocsToolTest {
     @DisplayName("should search docs with custom limit")
     void shouldSearchDocsWithCustomLimit() {
         // Arrange
-        UUID libraryId = UUID.randomUUID();
+        String libraryId = randomId();
         String query = "configuration";
         int limit = 5;
 
@@ -74,7 +75,7 @@ class SearchDocsToolTest {
     @DisplayName("should search docs with specific version")
     void shouldSearchDocsWithSpecificVersion() {
         // Arrange
-        UUID libraryId = UUID.randomUUID();
+        String libraryId = randomId();
         String query = "database";
         String version = "2.0.0";
 
@@ -92,7 +93,7 @@ class SearchDocsToolTest {
     @DisplayName("should use default limit when limit is zero")
     void shouldUseDefaultLimitWhenLimitIsZero() {
         // Arrange
-        UUID libraryId = UUID.randomUUID();
+        String libraryId = randomId();
         String query = "test";
 
         when(searchService.fullTextSearch(libraryId, null, query, 10))
@@ -109,7 +110,7 @@ class SearchDocsToolTest {
     @DisplayName("should use default limit when limit is negative")
     void shouldUseDefaultLimitWhenLimitIsNegative() {
         // Arrange
-        UUID libraryId = UUID.randomUUID();
+        String libraryId = randomId();
         String query = "test";
 
         when(searchService.fullTextSearch(libraryId, null, query, 10))
@@ -126,7 +127,7 @@ class SearchDocsToolTest {
     @DisplayName("should return empty results when no matches")
     void shouldReturnEmptyResultsWhenNoMatches() {
         // Arrange
-        UUID libraryId = UUID.randomUUID();
+        String libraryId = randomId();
         String query = "nonexistent";
 
         when(searchService.fullTextSearch(libraryId, null, query, 10))
@@ -138,5 +139,10 @@ class SearchDocsToolTest {
         // Assert
         assertThat(result.results()).isEmpty();
         assertThat(result.total()).isEqualTo(0);
+    }
+
+    // 產生隨機 ID 的輔助方法
+    private String randomId() {
+        return TsidCreator.getTsid().toString();
     }
 }

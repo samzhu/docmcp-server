@@ -61,7 +61,7 @@ public class GetSyncStatusTool {
         var resolved = libraryService.resolveLibrary(libraryName, version);
         var library = resolved.library();
         var libraryVersion = resolved.version();
-        var versionId = libraryVersion.id();
+        var versionId = libraryVersion.getId();
 
         // 檢查是否有正在執行的同步任務
         boolean isRunning = syncHistoryRepository.hasRunningSyncTask(versionId);
@@ -78,10 +78,10 @@ public class GetSyncStatusTool {
                 .toList();
 
         return new GetSyncStatusResult(
-                library.id().toString(),
-                library.name(),
-                versionId.toString(),
-                libraryVersion.version(),
+                library.getId(),
+                library.getName(),
+                versionId,
+                libraryVersion.getVersion(),
                 isRunning,
                 latestSync,
                 recentSyncs

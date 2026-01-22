@@ -6,8 +6,6 @@ import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Component;
 
-import java.util.UUID;
-
 /**
  * semantic_search MCP 工具
  * <p>
@@ -57,8 +55,8 @@ public class SemanticSearchTool {
                     回傳：語意相似的文件區塊列表，包含相似度分數。
                     """)
     public SemanticSearchResult semanticSearch(
-            @ToolParam(description = "函式庫 ID（UUID 格式）")
-            UUID libraryId,
+            @ToolParam(description = "函式庫 ID（TSID 格式）")
+            String libraryId,
             @ToolParam(description = "自然語言查詢，例如「如何設定資料庫連線」")
             String query,
             @ToolParam(description = "版本，預設為最新版", required = false)

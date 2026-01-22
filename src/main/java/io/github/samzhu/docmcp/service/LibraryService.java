@@ -23,7 +23,6 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -49,6 +48,7 @@ public class LibraryService {
             "^https://github\\.com/([^/]+)/([^/]+)(?:/.*)?$"
     );
 
+    private final IdService idService;
     private final LibraryRepository libraryRepository;
     private final LibraryVersionRepository libraryVersionRepository;
     private final GitHubClient gitHubClient;
@@ -56,12 +56,14 @@ public class LibraryService {
     private final SyncService syncService;
     private final VersionService versionService;
 
-    public LibraryService(LibraryRepository libraryRepository,
+    public LibraryService(IdService idService,
+                          LibraryRepository libraryRepository,
                           LibraryVersionRepository libraryVersionRepository,
                           GitHubClient gitHubClient,
                           KnownDocsPathsProperties knownDocsPathsProperties,
                           SyncService syncService,
                           VersionService versionService) {
+        this.idService = idService;
         this.libraryRepository = libraryRepository;
         this.libraryVersionRepository = libraryVersionRepository;
         this.gitHubClient = gitHubClient;
@@ -105,9 +107,9 @@ public class LibraryService {
                 .orElseThrow(() -> LibraryNotFoundException.byName(name));
 
         // 委派給 VersionService 解析版本
-        LibraryVersion resolvedVersion = versionService.resolveVersion(library.id(), version);
+        LibraryVersion resolvedVersion = versionService.resolveVersion(library.getId(), version);
 
-        return new ResolvedLibrary(library, resolvedVersion, resolvedVersion.version());
+        return new ResolvedLibrary(library, resolvedVersion, resolvedVersion.getVersion());
     }
 
     /**
@@ -127,11 +129,11 @@ public class LibraryService {
     /**
      * 根據 ID 取得函式庫
      *
-     * @param id 函式庫 ID
+     * @param id 函式庫 ID（TSID 格式）
      * @return 函式庫
      * @throws LibraryNotFoundException 若函式庫不存在
      */
-    public Library getLibraryById(UUID id) {
+    public Library getLibraryById(String id) {
         return libraryRepository.findById(id)
                 .orElseThrow(() -> LibraryNotFoundException.byId(id));
     }
@@ -157,7 +159,9 @@ public class LibraryService {
             throw new IllegalArgumentException("函式庫名稱已存在: " + name);
         }
 
-        Library library = Library.create(name, displayName, description,
+        // 使用 IdService 生成 TSID
+        String id = idService.generateId();
+        Library library = Library.create(id, name, displayName, description,
                 sourceType, sourceUrl, category, tags);
         return libraryRepository.save(library);
     }
@@ -165,7 +169,7 @@ public class LibraryService {
     /**
      * 更新函式庫
      *
-     * @param id          函式庫 ID
+     * @param id          函式庫 ID（TSID 格式）
      * @param displayName 顯示名稱（null 表示不更新）
      * @param description 描述（null 表示不更新）
      * @param sourceType  來源類型（null 表示不更新）
@@ -176,21 +180,22 @@ public class LibraryService {
      * @throws LibraryNotFoundException 若函式庫不存在
      */
     @Transactional
-    public Library updateLibrary(UUID id, String displayName, String description,
+    public Library updateLibrary(String id, String displayName, String description,
                                   SourceType sourceType, String sourceUrl,
                                   String category, List<String> tags) {
         Library existing = getLibraryById(id);
 
         Library updated = new Library(
-                existing.id(),
-                existing.name(),
-                displayName != null ? displayName : existing.displayName(),
-                description != null ? description : existing.description(),
-                sourceType != null ? sourceType : existing.sourceType(),
-                sourceUrl != null ? sourceUrl : existing.sourceUrl(),
-                category != null ? category : existing.category(),
-                tags != null ? tags : existing.tags(),
-                existing.createdAt(),
+                existing.getId(),
+                existing.getName(),
+                displayName != null ? displayName : existing.getDisplayName(),
+                description != null ? description : existing.getDescription(),
+                sourceType != null ? sourceType : existing.getSourceType(),
+                sourceUrl != null ? sourceUrl : existing.getSourceUrl(),
+                category != null ? category : existing.getCategory(),
+                tags != null ? tags : existing.getTags(),
+                existing.getVersion(),  // 保留 version 以進行樂觀鎖定
+                existing.getCreatedAt(),
                 null  // updatedAt 由資料庫自動處理
         );
 
@@ -200,11 +205,11 @@ public class LibraryService {
     /**
      * 刪除函式庫
      *
-     * @param id 函式庫 ID
+     * @param id 函式庫 ID（TSID 格式）
      * @throws LibraryNotFoundException 若函式庫不存在
      */
     @Transactional
-    public void deleteLibrary(UUID id) {
+    public void deleteLibrary(String id) {
         Library library = getLibraryById(id);
         libraryRepository.delete(library);
     }
@@ -215,11 +220,11 @@ public class LibraryService {
      * 委派給 VersionService 處理。
      * </p>
      *
-     * @param libraryId 函式庫 ID
+     * @param libraryId 函式庫 ID（TSID 格式）
      * @return 版本列表
      * @throws LibraryNotFoundException 若函式庫不存在
      */
-    public List<LibraryVersion> getLibraryVersionsById(UUID libraryId) {
+    public List<LibraryVersion> getLibraryVersionsById(String libraryId) {
         return versionService.getVersionsByLibraryId(libraryId);
     }
 
@@ -229,11 +234,11 @@ public class LibraryService {
      * 委派給 VersionService 處理。
      * </p>
      *
-     * @param versionId 版本 ID
+     * @param versionId 版本 ID（TSID 格式）
      * @return 版本
      * @throws LibraryNotFoundException 若版本不存在
      */
-    public LibraryVersion getVersionById(UUID versionId) {
+    public LibraryVersion getVersionById(String versionId) {
         return versionService.getVersionById(versionId);
     }
 
@@ -244,17 +249,17 @@ public class LibraryService {
      * 同時自動帶入已知函式庫的預設文件路徑。
      * </p>
      *
-     * @param libraryId 函式庫 ID
+     * @param libraryId 函式庫 ID（TSID 格式）
      * @param limit     回傳數量上限
      * @return GitHub Releases 回應（包含預設文件路徑和 Release 列表）
      * @throws LibraryNotFoundException 若函式庫不存在
      * @throws IllegalArgumentException 若函式庫的 sourceUrl 不是有效的 GitHub URL
      */
-    public GitHubReleasesResponse getGitHubReleases(UUID libraryId, int limit) {
+    public GitHubReleasesResponse getGitHubReleases(String libraryId, int limit) {
         Library library = getLibraryById(libraryId);
 
         // 解析 GitHub URL 取得 owner 和 repo
-        GitHubInfo ghInfo = parseGitHubUrl(library.sourceUrl());
+        GitHubInfo ghInfo = parseGitHubUrl(library.getSourceUrl());
         String ownerRepo = ghInfo.owner() + "/" + ghInfo.repo();
 
         // 從配置取得預設文件路徑（不帶版本號，用於 API 回應的 defaultDocsPath）
@@ -266,7 +271,7 @@ public class LibraryService {
         // 取得已存在的版本
         Set<String> existingVersions = libraryVersionRepository.findByLibraryId(libraryId)
                 .stream()
-                .map(LibraryVersion::version)
+                .map(LibraryVersion::getVersion)
                 .collect(Collectors.toSet());
 
         // 轉換為 DTO，過濾草稿和預發行版本，並限制數量
@@ -284,7 +289,7 @@ public class LibraryService {
                 .toList();
 
         log.info("Retrieved {} GitHub releases for library {} ({}), defaultDocsPath={}",
-                releaseDtos.size(), library.name(), ownerRepo, defaultDocsPath);
+                releaseDtos.size(), library.getName(), ownerRepo, defaultDocsPath);
 
         return new GitHubReleasesResponse(defaultDocsPath, releaseDtos);
     }
@@ -295,7 +300,7 @@ public class LibraryService {
      * 委派給 VersionService 處理。
      * </p>
      *
-     * @param libraryId   函式庫 ID
+     * @param libraryId   函式庫 ID（TSID 格式）
      * @param version     版本號
      * @param docsPath    文件路徑
      * @param releaseDate 發布日期
@@ -304,7 +309,7 @@ public class LibraryService {
      * @throws LibraryNotFoundException 若函式庫不存在
      */
     @Transactional
-    public LibraryVersion createVersion(UUID libraryId, String version, String docsPath,
+    public LibraryVersion createVersion(String libraryId, String version, String docsPath,
                                          LocalDate releaseDate, boolean isLatest) {
         return versionService.createVersion(libraryId, version, docsPath, releaseDate, isLatest);
     }
@@ -315,17 +320,17 @@ public class LibraryService {
      * 為每個選中的版本建立記錄並觸發非同步同步任務。
      * </p>
      *
-     * @param libraryId 函式庫 ID
+     * @param libraryId 函式庫 ID（TSID 格式）
      * @param request   批次同步請求
      * @return 批次同步回應
      * @throws LibraryNotFoundException 若函式庫不存在
      */
     @Transactional
-    public BatchSyncResponse batchCreateAndSync(UUID libraryId, BatchSyncRequest request) {
+    public BatchSyncResponse batchCreateAndSync(String libraryId, BatchSyncRequest request) {
         Library library = getLibraryById(libraryId);
 
         // 解析 GitHub URL
-        GitHubInfo ghInfo = parseGitHubUrl(library.sourceUrl());
+        GitHubInfo ghInfo = parseGitHubUrl(library.getSourceUrl());
 
         List<BatchSyncResponse.SyncedItem> syncedItems = new ArrayList<>();
         boolean isFirst = true;
@@ -351,7 +356,7 @@ public class LibraryService {
 
                 // 觸發非同步同步任務
                 CompletableFuture<SyncHistory> syncFuture = syncService.syncFromGitHub(
-                        version.id(),
+                        version.getId(),
                         ghInfo.owner(),
                         ghInfo.repo(),
                         docsPath,
@@ -362,19 +367,19 @@ public class LibraryService {
                 // 注意：這裡不會等待同步完成，只是取得已建立的 SyncHistory ID
                 SyncHistory syncHistory = syncFuture.get();
                 syncedItems.add(new BatchSyncResponse.SyncedItem(
-                        version.id(),
+                        version.getId(),
                         item.version(),
-                        syncHistory.id()
+                        syncHistory.getId()
                 ));
 
                 log.info("Created version {} and started sync for library {}",
-                        item.version(), library.name());
+                        item.version(), library.getName());
 
                 isFirst = false;
 
             } catch (Exception e) {
                 log.error("Failed to create and sync version {} for library {}",
-                        item.version(), library.name(), e);
+                        item.version(), library.getName(), e);
                 // 繼續處理其他版本
             }
         }

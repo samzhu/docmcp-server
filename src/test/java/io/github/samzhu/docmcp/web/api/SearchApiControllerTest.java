@@ -19,8 +19,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
+import com.github.f4b6a3.tsid.TsidCreator;
+
 import java.util.List;
-import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyDouble;
@@ -62,10 +63,10 @@ class SearchApiControllerTest {
     @Test
     @WithMockUser
     void shouldSearchWithFulltextMode() throws Exception {
-        var libraryId = UUID.randomUUID();
+        var libraryId = TsidCreator.getTsid().toString();
         var results = List.of(
                 SearchResultItem.fromDocument(
-                        UUID.randomUUID(), "Getting Started", "/docs/getting-started.md",
+                        TsidCreator.getTsid().toString(), "Getting Started", "/docs/getting-started.md",
                         "How to get started with...", 1.0
                 )
         );
@@ -86,10 +87,10 @@ class SearchApiControllerTest {
     @Test
     @WithMockUser
     void shouldSearchWithSemanticMode() throws Exception {
-        var libraryId = UUID.randomUUID();
+        var libraryId = TsidCreator.getTsid().toString();
         var results = List.of(
                 SearchResultItem.fromChunk(
-                        UUID.randomUUID(), UUID.randomUUID(),
+                        TsidCreator.getTsid().toString(), TsidCreator.getTsid().toString(),
                         "Configuration Guide", "/docs/config.md",
                         "Configure your application...", 0.85, 0
                 )
@@ -110,19 +111,19 @@ class SearchApiControllerTest {
     @WithMockUser
     void shouldSearchWithHybridMode() throws Exception {
         // 測試 hybrid 模式：現在使用 RRF 演算法的 hybridSearch 方法
-        var libraryId = UUID.randomUUID();
+        var libraryId = TsidCreator.getTsid().toString();
         var library = new Library(
                 libraryId, "spring-boot", "Spring Boot", null,
-                SourceType.GITHUB, null, "backend", null, null, null
+                SourceType.GITHUB, null, "backend", null, 0L, null, null
         );
         // RRF 演算法合併後的結果
         var hybridResults = List.of(
                 SearchResultItem.fromDocument(
-                        UUID.randomUUID(), "Quick Start", "/docs/quick-start.md",
+                        TsidCreator.getTsid().toString(), "Quick Start", "/docs/quick-start.md",
                         "Quick start guide...", 0.0164
                 ),
                 SearchResultItem.fromChunk(
-                        UUID.randomUUID(), UUID.randomUUID(),
+                        TsidCreator.getTsid().toString(), TsidCreator.getTsid().toString(),
                         "Introduction", "/docs/intro.md",
                         "Introduction to...", 0.0115, 0
                 )
@@ -164,7 +165,7 @@ class SearchApiControllerTest {
     @Test
     @WithMockUser
     void shouldReturn400ForInvalidSearchMode() throws Exception {
-        var libraryId = UUID.randomUUID();
+        var libraryId = TsidCreator.getTsid().toString();
 
         mockMvc.perform(get("/api/search")
                         .param("query", "test")
@@ -176,7 +177,7 @@ class SearchApiControllerTest {
     @Test
     @WithMockUser
     void shouldApplyCustomLimit() throws Exception {
-        var libraryId = UUID.randomUUID();
+        var libraryId = TsidCreator.getTsid().toString();
         when(searchService.fullTextSearch(eq(libraryId), any(), any(), eq(5)))
                 .thenReturn(List.of());
 

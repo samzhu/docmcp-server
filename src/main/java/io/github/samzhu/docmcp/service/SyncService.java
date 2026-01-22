@@ -31,7 +31,6 @@ import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -46,6 +45,7 @@ public class SyncService {
 
     private static final Logger log = LoggerFactory.getLogger(SyncService.class);
 
+    private final IdService idService;
     private final GitHubContentFetcher gitHubContentFetcher;
     private final LocalFileClient localFileClient;
     private final List<DocumentParser> parsers;
@@ -57,7 +57,8 @@ public class SyncService {
     private final CodeExampleRepository codeExampleRepository;
     private final SyncHistoryRepository syncHistoryRepository;
 
-    public SyncService(GitHubContentFetcher gitHubContentFetcher,
+    public SyncService(IdService idService,
+                       GitHubContentFetcher gitHubContentFetcher,
                        LocalFileClient localFileClient,
                        List<DocumentParser> parsers,
                        DocumentChunker chunker,
@@ -67,6 +68,7 @@ public class SyncService {
                        DocumentChunkRepository chunkRepository,
                        CodeExampleRepository codeExampleRepository,
                        SyncHistoryRepository syncHistoryRepository) {
+        this.idService = idService;
         this.gitHubContentFetcher = gitHubContentFetcher;
         this.localFileClient = localFileClient;
         this.parsers = parsers;
@@ -82,7 +84,7 @@ public class SyncService {
     /**
      * 從 GitHub 同步文件（非同步執行）
      *
-     * @param versionId 版本 ID
+     * @param versionId 版本 ID（TSID 格式）
      * @param owner     GitHub 儲存庫擁有者
      * @param repo      GitHub 儲存庫名稱
      * @param docsPath  文件目錄路徑
@@ -90,7 +92,7 @@ public class SyncService {
      * @return 同步歷史（非同步結果）
      */
     @Async
-    public CompletableFuture<SyncHistory> syncFromGitHub(UUID versionId, String owner,
+    public CompletableFuture<SyncHistory> syncFromGitHub(String versionId, String owner,
                                                           String repo, String docsPath, String ref) {
         log.info("Starting GitHub sync for version: {} from {}/{} path={} ref={}",
                 versionId, owner, repo, docsPath, ref);
@@ -151,31 +153,31 @@ public class SyncService {
     /**
      * 取得同步狀態
      *
-     * @param syncId 同步 ID
+     * @param syncId 同步 ID（TSID 格式）
      * @return 同步歷史
      */
-    public Optional<SyncHistory> getSyncStatus(UUID syncId) {
+    public Optional<SyncHistory> getSyncStatus(String syncId) {
         return syncHistoryRepository.findById(syncId);
     }
 
     /**
      * 取得版本的最新同步記錄
      *
-     * @param versionId 版本 ID
+     * @param versionId 版本 ID（TSID 格式）
      * @return 最新的同步歷史
      */
-    public Optional<SyncHistory> getLatestSyncHistory(UUID versionId) {
+    public Optional<SyncHistory> getLatestSyncHistory(String versionId) {
         return syncHistoryRepository.findLatestByVersionId(versionId);
     }
 
     /**
      * 取得同步歷史列表
      *
-     * @param versionId 版本 ID（可選，null 表示查詢所有）
+     * @param versionId 版本 ID（TSID 格式，可選，null 表示查詢所有）
      * @param limit     結果數量上限
      * @return 同步歷史列表
      */
-    public List<SyncHistory> getSyncHistory(UUID versionId, int limit) {
+    public List<SyncHistory> getSyncHistory(String versionId, int limit) {
         if (versionId != null) {
             return syncHistoryRepository.findByVersionIdOrderByStartedAtDescLimit(versionId, limit);
         }
@@ -185,13 +187,13 @@ public class SyncService {
     /**
      * 從本地文件系統同步文件（非同步執行）
      *
-     * @param versionId 版本 ID
+     * @param versionId 版本 ID（TSID 格式）
      * @param localPath 本地目錄路徑
      * @param pattern   glob 模式（如 "**\/*.md"）
      * @return 同步歷史（非同步結果）
      */
     @Async
-    public CompletableFuture<SyncHistory> syncFromLocal(UUID versionId, Path localPath, String pattern) {
+    public CompletableFuture<SyncHistory> syncFromLocal(String versionId, Path localPath, String pattern) {
         log.info("Starting local sync for version: {} from path={} pattern={}",
                 versionId, localPath, pattern);
 
@@ -255,7 +257,7 @@ public class SyncService {
      * 處理本地文件
      */
     @Transactional
-    protected SyncResult processLocalFile(UUID versionId, LocalFileClient.FileContent file) {
+    protected SyncResult processLocalFile(String versionId, LocalFileClient.FileContent file) {
         String content = file.content();
         String path = file.path();
 
@@ -264,7 +266,7 @@ public class SyncService {
 
         // 檢查是否已存在且內容相同
         Optional<Document> existingDoc = documentRepository.findByVersionIdAndPath(versionId, path);
-        if (existingDoc.isPresent() && contentHash.equals(existingDoc.get().contentHash())) {
+        if (existingDoc.isPresent() && contentHash.equals(existingDoc.get().getContentHash())) {
             log.debug("Skipping unchanged local file: {}", path);
             return new SyncResult(0, false);
         }
@@ -281,7 +283,7 @@ public class SyncService {
 
         // 刪除舊資料（如果存在）
         if (existingDoc.isPresent()) {
-            UUID docId = existingDoc.get().id();
+            String docId = existingDoc.get().getId();
             codeExampleRepository.findByDocumentId(docId)
                     .forEach(ex -> codeExampleRepository.delete(ex));
             chunkRepository.findByDocumentIdOrderByChunkIndex(docId)
@@ -289,11 +291,13 @@ public class SyncService {
             documentRepository.delete(existingDoc.get());
         }
 
+        // 使用 IdService 生成新文件 ID
+        String documentId = idService.generateId();
+
         // 儲存文件
-        Document document = Document.create(versionId, parsed.title(), path,
+        Document document = Document.create(documentId, versionId, parsed.title(), path,
                 content, contentHash, parser.getDocType());
         document = documentRepository.save(document);
-        UUID documentId = document.id();
 
         // 分塊並使用 VectorStore 批次建立嵌入
         List<DocumentChunker.ChunkResult> chunks = chunker.chunk(content);
@@ -316,7 +320,8 @@ public class SyncService {
 
         // 儲存程式碼範例
         for (ParsedDocument.CodeBlock codeBlock : parsed.codeBlocks()) {
-            CodeExample example = CodeExample.create(documentId, codeBlock.language(),
+            String codeExampleId = idService.generateId();
+            CodeExample example = CodeExample.create(codeExampleId, documentId, codeBlock.language(),
                     codeBlock.code(), codeBlock.description());
             codeExampleRepository.save(example);
         }
@@ -327,7 +332,7 @@ public class SyncService {
     /**
      * 處理單一文件
      *
-     * @param versionId   版本 ID
+     * @param versionId   版本 ID（TSID 格式）
      * @param owner       GitHub 儲存庫擁有者
      * @param repo        GitHub 儲存庫名稱
      * @param file        檔案資訊
@@ -336,7 +341,7 @@ public class SyncService {
      * @return 同步結果
      */
     @Transactional
-    protected SyncResult processFile(UUID versionId, String owner, String repo,
+    protected SyncResult processFile(String versionId, String owner, String repo,
                                       GitHubFile file, String ref, FetchResult fetchResult) {
         // 取得文件內容（優先使用預載入內容，否則從 raw URL 下載）
         String content = gitHubContentFetcher.getFileContent(fetchResult, owner, repo, file.path(), ref);
@@ -346,7 +351,7 @@ public class SyncService {
 
         // 檢查是否已存在且內容相同
         Optional<Document> existingDoc = documentRepository.findByVersionIdAndPath(versionId, file.path());
-        if (existingDoc.isPresent() && contentHash.equals(existingDoc.get().contentHash())) {
+        if (existingDoc.isPresent() && contentHash.equals(existingDoc.get().getContentHash())) {
             log.debug("Skipping unchanged file: {}", file.path());
             return new SyncResult(0, false);
         }
@@ -363,7 +368,7 @@ public class SyncService {
 
         // 刪除舊資料（如果存在）
         if (existingDoc.isPresent()) {
-            UUID docId = existingDoc.get().id();
+            String docId = existingDoc.get().getId();
             codeExampleRepository.findByDocumentId(docId)
                     .forEach(ex -> codeExampleRepository.delete(ex));
             chunkRepository.findByDocumentIdOrderByChunkIndex(docId)
@@ -371,11 +376,13 @@ public class SyncService {
             documentRepository.delete(existingDoc.get());
         }
 
+        // 使用 IdService 生成新文件 ID
+        String documentId = idService.generateId();
+
         // 儲存文件
-        Document document = Document.create(versionId, parsed.title(), file.path(),
+        Document document = Document.create(documentId, versionId, parsed.title(), file.path(),
                 content, contentHash, parser.getDocType());
         document = documentRepository.save(document);
-        UUID documentId = document.id();
 
         // 分塊並使用 VectorStore 批次建立嵌入
         List<DocumentChunker.ChunkResult> chunks = chunker.chunk(content);
@@ -398,7 +405,8 @@ public class SyncService {
 
         // 儲存程式碼範例
         for (ParsedDocument.CodeBlock codeBlock : parsed.codeBlocks()) {
-            CodeExample example = CodeExample.create(documentId, codeBlock.language(),
+            String codeExampleId = idService.generateId();
+            CodeExample example = CodeExample.create(codeExampleId, documentId, codeBlock.language(),
                     codeBlock.code(), codeBlock.description());
             codeExampleRepository.save(example);
         }
@@ -427,42 +435,71 @@ public class SyncService {
         }
     }
 
+    /**
+     * 建立同步歷史記錄
+     * <p>
+     * 儲存後從 DB 重新查詢，確保 @PersistenceCreator 設定 isNew = false，
+     * 讓後續更新操作能正確執行 UPDATE 而非 INSERT。
+     * </p>
+     */
     @Transactional
-    protected SyncHistory createSyncHistory(UUID versionId) {
-        SyncHistory history = SyncHistory.createPending(versionId);
-        return syncHistoryRepository.save(history);
+    protected SyncHistory createSyncHistory(String versionId) {
+        String id = idService.generateId();
+        SyncHistory history = SyncHistory.createPending(id, versionId);
+        syncHistoryRepository.save(history);
+        // 從 DB 重新查詢以獲取正確的 isNew 狀態
+        return syncHistoryRepository.findById(id)
+                .orElseThrow(() -> new IllegalStateException("Failed to create sync history"));
     }
 
+    /**
+     * 更新同步狀態
+     * <p>
+     * 使用 public constructor 創建實體，保留 version 以進行樂觀鎖定
+     * </p>
+     */
     @Transactional
     protected SyncHistory updateSyncStatus(SyncHistory history, SyncStatus status, String errorMessage) {
         SyncHistory updated = new SyncHistory(
-                history.id(),
-                history.versionId(),
+                history.getId(),
+                history.getVersionId(),
                 status,
-                history.startedAt(),
+                history.getStartedAt(),
                 null,
-                history.documentsProcessed(),
-                history.chunksCreated(),
+                history.getDocumentsProcessed(),
+                history.getChunksCreated(),
                 errorMessage,
-                history.metadata()
+                history.getMetadata(),
+                history.getVersion(),  // 保留 version 以進行樂觀鎖定
+                history.getCreatedAt(),
+                history.getUpdatedAt()
         );
         return syncHistoryRepository.save(updated);
     }
 
+    /**
+     * 完成同步歷史記錄
+     * <p>
+     * 使用 public constructor 創建實體，保留 version 以進行樂觀鎖定
+     * </p>
+     */
     @Transactional
     protected SyncHistory completeSyncHistory(SyncHistory history, SyncStatus status,
                                                int documentsProcessed, int chunksCreated,
                                                String errorMessage) {
         SyncHistory updated = new SyncHistory(
-                history.id(),
-                history.versionId(),
+                history.getId(),
+                history.getVersionId(),
                 status,
-                history.startedAt(),
+                history.getStartedAt(),
                 OffsetDateTime.now(),
                 documentsProcessed,
                 chunksCreated,
                 errorMessage,
-                Map.of()
+                Map.of(),
+                history.getVersion(),  // 保留 version 以進行樂觀鎖定
+                history.getCreatedAt(),
+                history.getUpdatedAt()
         );
         return syncHistoryRepository.save(updated);
     }

@@ -8,7 +8,6 @@ import io.github.samzhu.docmcp.domain.model.SyncHistory;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.Map;
-import java.util.UUID;
 
 /**
  * 同步歷史視圖資料傳輸物件
@@ -32,9 +31,9 @@ import java.util.UUID;
  * @param metadata           額外的元資料
  */
 public record SyncHistoryViewDto(
-        UUID id,
-        UUID versionId,
-        UUID libraryId,
+        String id,
+        String versionId,
+        String libraryId,
         String libraryName,
         String libraryDisplayName,
         String versionNumber,
@@ -52,25 +51,25 @@ public record SyncHistoryViewDto(
      */
     public static SyncHistoryViewDto from(SyncHistory history, LibraryVersion version, Library library) {
         Long durationSeconds = null;
-        if (history.startedAt() != null && history.completedAt() != null) {
-            durationSeconds = Duration.between(history.startedAt(), history.completedAt()).getSeconds();
+        if (history.getStartedAt() != null && history.getCompletedAt() != null) {
+            durationSeconds = Duration.between(history.getStartedAt(), history.getCompletedAt()).getSeconds();
         }
 
         return new SyncHistoryViewDto(
-                history.id(),
-                history.versionId(),
-                library != null ? library.id() : null,
-                library != null ? library.name() : null,
-                library != null ? library.displayName() : "Unknown Library",
-                version != null ? version.version() : "Unknown Version",
-                history.status(),
-                history.startedAt(),
-                history.completedAt(),
+                history.getId(),
+                history.getVersionId(),
+                library != null ? library.getId() : null,
+                library != null ? library.getName() : null,
+                library != null ? library.getDisplayName() : "Unknown Library",
+                version != null ? version.getVersion() : "Unknown Version",
+                history.getStatus(),
+                history.getStartedAt(),
+                history.getCompletedAt(),
                 durationSeconds,
-                history.documentsProcessed(),
-                history.chunksCreated(),
-                history.errorMessage(),
-                history.metadata()
+                history.getDocumentsProcessed(),
+                history.getChunksCreated(),
+                history.getErrorMessage(),
+                history.getMetadata()
         );
     }
 }

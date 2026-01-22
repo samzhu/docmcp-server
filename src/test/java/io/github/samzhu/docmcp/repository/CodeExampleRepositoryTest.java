@@ -1,5 +1,6 @@
 package io.github.samzhu.docmcp.repository;
 
+import com.github.f4b6a3.tsid.TsidCreator;
 import io.github.samzhu.docmcp.TestConfig;
 import io.github.samzhu.docmcp.TestcontainersConfiguration;
 import io.github.samzhu.docmcp.domain.enums.SourceType;
@@ -16,7 +17,6 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.util.List;
-import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -41,9 +41,16 @@ class CodeExampleRepositoryTest {
     @Autowired
     private LibraryRepository libraryRepository;
 
-    private UUID libraryId;
-    private UUID versionId;
-    private UUID documentId;
+    private String libraryId;
+    private String versionId;
+    private String documentId;
+
+    /**
+     * 生成隨機 TSID
+     */
+    private String randomId() {
+        return TsidCreator.getTsid().toString();
+    }
 
     @BeforeEach
     void setUp() {
@@ -54,27 +61,27 @@ class CodeExampleRepositoryTest {
         libraryRepository.deleteAll();
 
         // 建立測試資料
-        var library = Library.create("test-lib", "Test Library", "A test library",
+        var library = Library.create(randomId(), "test-lib", "Test Library", "A test library",
                 SourceType.GITHUB, "https://github.com/test/test-lib", "backend", List.of("java", "spring"));
         library = libraryRepository.save(library);
-        libraryId = library.id();
+        libraryId = library.getId();
 
-        var version = LibraryVersion.create(libraryId, "1.0.0", true);
+        var version = LibraryVersion.create(randomId(), libraryId, "1.0.0", true);
         version = versionRepository.save(version);
-        versionId = version.id();
+        versionId = version.getId();
 
-        var document = Document.create(versionId, "Test Doc", "/docs/test.md",
+        var document = Document.create(randomId(), versionId, "Test Doc", "/docs/test.md",
                 "Test content", "abc123", "markdown");
         document = documentRepository.save(document);
-        documentId = document.id();
+        documentId = document.getId();
     }
 
     @Test
     @DisplayName("should find code examples by document ID")
     void shouldFindCodeExamplesByDocumentId() {
         // Arrange
-        var example1 = CodeExample.create(documentId, "java", "System.out.println(\"Hello\");", "Hello World");
-        var example2 = CodeExample.create(documentId, "java", "int x = 42;", "Variable declaration");
+        var example1 = CodeExample.create(randomId(), documentId, "java", "System.out.println(\"Hello\");", "Hello World");
+        var example2 = CodeExample.create(randomId(), documentId, "java", "int x = 42;", "Variable declaration");
         codeExampleRepository.save(example1);
         codeExampleRepository.save(example2);
 
@@ -89,7 +96,7 @@ class CodeExampleRepositoryTest {
     @DisplayName("should return empty list when no examples for document")
     void shouldReturnEmptyListWhenNoExamplesForDocument() {
         // Act
-        var results = codeExampleRepository.findByDocumentId(UUID.randomUUID());
+        var results = codeExampleRepository.findByDocumentId(randomId());
 
         // Assert
         assertThat(results).isEmpty();
@@ -99,8 +106,8 @@ class CodeExampleRepositoryTest {
     @DisplayName("should find code examples by library and language")
     void shouldFindCodeExamplesByLibraryAndLanguage() {
         // Arrange
-        var javaExample = CodeExample.create(documentId, "java", "public class Test {}", "Java class");
-        var jsExample = CodeExample.create(documentId, "javascript", "console.log('Hello')", "JS log");
+        var javaExample = CodeExample.create(randomId(), documentId, "java", "public class Test {}", "Java class");
+        var jsExample = CodeExample.create(randomId(), documentId, "javascript", "console.log('Hello')", "JS log");
         codeExampleRepository.save(javaExample);
         codeExampleRepository.save(jsExample);
 
@@ -109,15 +116,15 @@ class CodeExampleRepositoryTest {
 
         // Assert
         assertThat(results).hasSize(1);
-        assertThat(results.getFirst().language()).isEqualTo("java");
+        assertThat(results.getFirst().getLanguage()).isEqualTo("java");
     }
 
     @Test
     @DisplayName("should find all code examples when language is null")
     void shouldFindAllCodeExamplesWhenLanguageIsNull() {
         // Arrange
-        var javaExample = CodeExample.create(documentId, "java", "public class Test {}", "Java class");
-        var jsExample = CodeExample.create(documentId, "javascript", "console.log('Hello')", "JS log");
+        var javaExample = CodeExample.create(randomId(), documentId, "java", "public class Test {}", "Java class");
+        var jsExample = CodeExample.create(randomId(), documentId, "javascript", "console.log('Hello')", "JS log");
         codeExampleRepository.save(javaExample);
         codeExampleRepository.save(jsExample);
 
@@ -133,7 +140,7 @@ class CodeExampleRepositoryTest {
     void shouldRespectLimit() {
         // Arrange
         for (int i = 0; i < 5; i++) {
-            var example = CodeExample.create(documentId, "java", "code " + i, "Example " + i);
+            var example = CodeExample.create(randomId(), documentId, "java", "code " + i, "Example " + i);
             codeExampleRepository.save(example);
         }
 
@@ -148,10 +155,10 @@ class CodeExampleRepositoryTest {
     @DisplayName("should find distinct languages by library")
     void shouldFindDistinctLanguagesByLibrary() {
         // Arrange
-        var java1 = CodeExample.create(documentId, "java", "code1", "Example 1");
-        var java2 = CodeExample.create(documentId, "java", "code2", "Example 2");
-        var js = CodeExample.create(documentId, "javascript", "code3", "Example 3");
-        var python = CodeExample.create(documentId, "python", "code4", "Example 4");
+        var java1 = CodeExample.create(randomId(), documentId, "java", "code1", "Example 1");
+        var java2 = CodeExample.create(randomId(), documentId, "java", "code2", "Example 2");
+        var js = CodeExample.create(randomId(), documentId, "javascript", "code3", "Example 3");
+        var python = CodeExample.create(randomId(), documentId, "python", "code4", "Example 4");
         codeExampleRepository.save(java1);
         codeExampleRepository.save(java2);
         codeExampleRepository.save(js);

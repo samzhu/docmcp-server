@@ -68,7 +68,7 @@ public class GetDocTocTool {
         var libraryVersion = resolved.version();
 
         // 取得所有文件（依路徑排序）
-        var documents = documentRepository.findByVersionIdOrderByPathAsc(libraryVersion.id());
+        var documents = documentRepository.findByVersionIdOrderByPathAsc(libraryVersion.getId());
 
         // 設定最大深度
         int depth = maxDepth != null && maxDepth > 0 ? maxDepth : DEFAULT_MAX_DEPTH;
@@ -77,9 +77,9 @@ public class GetDocTocTool {
         var entries = buildTocEntries(documents, depth);
 
         return new GetDocTocResult(
-                library.id().toString(),
-                library.name(),
-                libraryVersion.version(),
+                library.getId(),
+                library.getName(),
+                libraryVersion.getVersion(),
                 entries,
                 documents.size()
         );
@@ -93,15 +93,15 @@ public class GetDocTocTool {
 
         for (Document doc : documents) {
             // 計算文件深度
-            int depth = calculateDepth(doc.path());
+            int docDepth = calculateDepth(doc.getPath());
 
             // 只加入深度符合限制的文件
-            if (depth <= maxDepth) {
+            if (docDepth <= maxDepth) {
                 entries.add(new GetDocTocResult.TocEntry(
-                        doc.id().toString(),
-                        doc.title(),
-                        doc.path(),
-                        depth,
+                        doc.getId(),
+                        doc.getTitle(),
+                        doc.getPath(),
+                        docDepth,
                         List.of()  // 簡化實作：不建立巢狀結構
                 ));
             }

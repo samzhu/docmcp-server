@@ -16,7 +16,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Optional;
-import java.util.UUID;
+
+import com.github.f4b6a3.tsid.TsidCreator;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -45,9 +46,9 @@ class DocResourceProviderTest {
     @DisplayName("應回傳指定版本的文件內容")
     void shouldReturnDocumentContent() {
         // Arrange
-        var libraryId = UUID.randomUUID();
-        var versionId = UUID.randomUUID();
-        var docId = UUID.randomUUID();
+        var libraryId = randomId();
+        var versionId = randomId();
+        var docId = randomId();
         var library = createLibrary(libraryId, "spring-boot", "Spring Boot");
         var version = createVersion(versionId, libraryId, "3.2.0", true);
         var resolvedLibrary = new LibraryService.ResolvedLibrary(library, version, "3.2.0");
@@ -73,9 +74,9 @@ class DocResourceProviderTest {
     @DisplayName("應回傳最新版本的文件內容")
     void shouldReturnLatestVersionDocumentContent() {
         // Arrange
-        var libraryId = UUID.randomUUID();
-        var versionId = UUID.randomUUID();
-        var docId = UUID.randomUUID();
+        var libraryId = randomId();
+        var versionId = randomId();
+        var docId = randomId();
         var library = createLibrary(libraryId, "react", "React");
         var version = createVersion(versionId, libraryId, "18.2.0", true);
         var resolvedLibrary = new LibraryService.ResolvedLibrary(library, version, "18.2.0");
@@ -98,8 +99,8 @@ class DocResourceProviderTest {
     @DisplayName("當文件不存在時應拋出例外")
     void shouldThrowExceptionWhenDocumentNotFound() {
         // Arrange
-        var libraryId = UUID.randomUUID();
-        var versionId = UUID.randomUUID();
+        var libraryId = randomId();
+        var versionId = randomId();
         var library = createLibrary(libraryId, "spring-boot", "Spring Boot");
         var version = createVersion(versionId, libraryId, "3.2.0", true);
         var resolvedLibrary = new LibraryService.ResolvedLibrary(library, version, "3.2.0");
@@ -128,15 +129,20 @@ class DocResourceProviderTest {
                 .isInstanceOf(LibraryNotFoundException.class);
     }
 
-    private Library createLibrary(UUID id, String name, String displayName) {
-        return new Library(id, name, displayName, null, null, null, null, null, null, null);
+    // 產生隨機 ID 的輔助方法
+    private String randomId() {
+        return TsidCreator.getTsid().toString();
     }
 
-    private LibraryVersion createVersion(UUID id, UUID libraryId, String version, boolean isLatest) {
-        return new LibraryVersion(id, libraryId, version, isLatest, false, VersionStatus.ACTIVE, null, null, null, null);
+    private Library createLibrary(String id, String name, String displayName) {
+        return new Library(id, name, displayName, null, null, null, null, null, 0L, null, null);
     }
 
-    private Document createDocument(UUID id, UUID versionId, String title, String path, String content) {
-        return new Document(id, versionId, title, path, content, null, "markdown", null, null, null);
+    private LibraryVersion createVersion(String id, String libraryId, String version, boolean isLatest) {
+        return new LibraryVersion(id, libraryId, version, isLatest, false, VersionStatus.ACTIVE, null, null, 0L, null, null);
+    }
+
+    private Document createDocument(String id, String versionId, String title, String path, String content) {
+        return new Document(id, versionId, title, path, content, null, "markdown", null, 0L, null, null);
     }
 }

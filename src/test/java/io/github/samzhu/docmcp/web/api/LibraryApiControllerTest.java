@@ -1,6 +1,7 @@
 package io.github.samzhu.docmcp.web.api;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.github.f4b6a3.tsid.TsidCreator;
 import io.github.samzhu.docmcp.TestConfig;
 import io.github.samzhu.docmcp.TestcontainersConfiguration;
 import io.github.samzhu.docmcp.domain.enums.SourceType;
@@ -27,7 +28,6 @@ import org.springframework.web.context.WebApplicationContext;
 
 import java.time.OffsetDateTime;
 import java.util.List;
-import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -59,6 +59,13 @@ class LibraryApiControllerTest {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    /**
+     * 產生隨機 ID
+     */
+    private String randomId() {
+        return TsidCreator.getTsid().toString();
+    }
 
     @BeforeEach
     void setUp() {
@@ -132,9 +139,9 @@ class LibraryApiControllerTest {
     @WithMockUser
     void shouldGetLibraryById() throws Exception {
         var library = createLibrary("react", "React", "frontend");
-        when(libraryService.getLibraryById(library.id())).thenReturn(library);
+        when(libraryService.getLibraryById(library.getId())).thenReturn(library);
 
-        mockMvc.perform(get("/api/libraries/{id}", library.id()))
+        mockMvc.perform(get("/api/libraries/{id}", library.getId()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("react"))
                 .andExpect(jsonPath("$.displayName").value("React"));
@@ -143,7 +150,7 @@ class LibraryApiControllerTest {
     @Test
     @WithMockUser
     void shouldReturn404WhenLibraryNotFound() throws Exception {
-        var id = UUID.randomUUID();
+        var id = randomId();
         when(libraryService.getLibraryById(id)).thenThrow(LibraryNotFoundException.byId(id));
 
         mockMvc.perform(get("/api/libraries/{id}", id))
@@ -154,7 +161,7 @@ class LibraryApiControllerTest {
     @Test
     @WithMockUser
     void shouldUpdateLibrary() throws Exception {
-        var id = UUID.randomUUID();
+        var id = randomId();
         var request = new UpdateLibraryRequest(
                 "React Updated",
                 "Updated description",
@@ -165,7 +172,7 @@ class LibraryApiControllerTest {
         );
         var library = new Library(
                 id, "react", "React Updated", "Updated description",
-                SourceType.GITHUB, null, "frontend", null, null, null
+                SourceType.GITHUB, null, "frontend", null, 0L, null, null
         );
         when(libraryService.updateLibrary(eq(id), any(), any(), any(), any(), any(), any()))
                 .thenReturn(library);
@@ -181,7 +188,7 @@ class LibraryApiControllerTest {
     @Test
     @WithMockUser
     void shouldDeleteLibrary() throws Exception {
-        var id = UUID.randomUUID();
+        var id = randomId();
         doNothing().when(libraryService).deleteLibrary(id);
 
         mockMvc.perform(delete("/api/libraries/{id}", id)
@@ -194,7 +201,7 @@ class LibraryApiControllerTest {
     @Test
     @WithMockUser
     void shouldReturn404WhenDeleteNonexistentLibrary() throws Exception {
-        var id = UUID.randomUUID();
+        var id = randomId();
         doThrow(LibraryNotFoundException.byId(id)).when(libraryService).deleteLibrary(id);
 
         mockMvc.perform(delete("/api/libraries/{id}", id)
@@ -205,7 +212,7 @@ class LibraryApiControllerTest {
     @Test
     @WithMockUser
     void shouldListLibraryVersions() throws Exception {
-        var libraryId = UUID.randomUUID();
+        var libraryId = randomId();
         var versions = List.of(
                 createVersion(libraryId, "3.2.0", true),
                 createVersion(libraryId, "3.1.0", false)
@@ -240,7 +247,7 @@ class LibraryApiControllerTest {
 
     private Library createLibrary(String name, String displayName, String category) {
         return new Library(
-                UUID.randomUUID(),
+                randomId(),
                 name,
                 displayName,
                 null,
@@ -248,14 +255,15 @@ class LibraryApiControllerTest {
                 "https://github.com/test/" + name,
                 category,
                 null,
+                0L,                     // version（模擬從資料庫讀取）
                 OffsetDateTime.now(),
                 OffsetDateTime.now()
         );
     }
 
-    private LibraryVersion createVersion(UUID libraryId, String version, boolean isLatest) {
+    private LibraryVersion createVersion(String libraryId, String version, boolean isLatest) {
         return new LibraryVersion(
-                UUID.randomUUID(),
+                randomId(),
                 libraryId,
                 version,
                 isLatest,
@@ -263,6 +271,7 @@ class LibraryApiControllerTest {
                 VersionStatus.ACTIVE,
                 "docs",
                 null,
+                0L,                     // entityVersion（模擬從資料庫讀取）
                 OffsetDateTime.now(),
                 OffsetDateTime.now()
         );

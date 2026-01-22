@@ -17,7 +17,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -54,31 +53,31 @@ public class SyncController {
     @GetMapping
     public String list(
             @RequestParam(required = false) SyncStatus status,
-            @RequestParam(required = false) UUID libraryId,
+            @RequestParam(required = false) String libraryId,
             @RequestParam(defaultValue = "50") int limit,
             Model model) {
 
         // 取得同步歷史
         List<SyncHistory> histories = syncService.getSyncHistory(null, limit);
 
-        // 建立版本 ID 到 LibraryVersion 的對應表
-        Map<UUID, LibraryVersion> versionMap = histories.stream()
-                .map(SyncHistory::versionId)
+        // 建立版本 ID 到 LibraryVersion 的對應表（ID 為 String，TSID 格式）
+        Map<String, LibraryVersion> versionMap = histories.stream()
+                .map(SyncHistory::getVersionId)
                 .distinct()
                 .map(versionRepository::findById)
                 .filter(java.util.Optional::isPresent)
                 .map(java.util.Optional::get)
-                .collect(Collectors.toMap(LibraryVersion::id, Function.identity()));
+                .collect(Collectors.toMap(LibraryVersion::getId, Function.identity()));
 
-        // 建立函式庫 ID 到 Library 的對應表
-        Map<UUID, Library> libraryMap = StreamSupport.stream(libraryRepository.findAll().spliterator(), false)
-                .collect(Collectors.toMap(Library::id, Function.identity()));
+        // 建立函式庫 ID 到 Library 的對應表（ID 為 String，TSID 格式）
+        Map<String, Library> libraryMap = StreamSupport.stream(libraryRepository.findAll().spliterator(), false)
+                .collect(Collectors.toMap(Library::getId, Function.identity()));
 
         // 轉換為 ViewDto
         List<SyncHistoryViewDto> syncHistories = histories.stream()
                 .map(h -> {
-                    LibraryVersion version = versionMap.get(h.versionId());
-                    Library library = version != null ? libraryMap.get(version.libraryId()) : null;
+                    LibraryVersion version = versionMap.get(h.getVersionId());
+                    Library library = version != null ? libraryMap.get(version.getLibraryId()) : null;
                     return SyncHistoryViewDto.from(h, version, library);
                 })
                 // 狀態篩選
@@ -116,7 +115,7 @@ public class SyncController {
      * @param id 同步 ID
      */
     @GetMapping("/{id}")
-    public String detail(@PathVariable UUID id, Model model) {
+    public String detail(@PathVariable String id, Model model) {
         var historyOpt = syncService.getSyncStatus(id);
 
         if (historyOpt.isEmpty()) {
@@ -126,12 +125,12 @@ public class SyncController {
         SyncHistory history = historyOpt.get();
 
         // 取得版本資訊
-        LibraryVersion version = versionRepository.findById(history.versionId()).orElse(null);
+        LibraryVersion version = versionRepository.findById(history.getVersionId()).orElse(null);
 
         // 取得函式庫資訊
         Library library = null;
         if (version != null) {
-            library = libraryRepository.findById(version.libraryId()).orElse(null);
+            library = libraryRepository.findById(version.getLibraryId()).orElse(null);
         }
 
         SyncHistoryViewDto syncDetail = SyncHistoryViewDto.from(history, version, library);

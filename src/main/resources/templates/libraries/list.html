@@ -37,36 +37,36 @@
                 <div class="flex items-start justify-between">
                     <div class="flex-1">
                         <h3 class="text-lg font-semibold text-primary">
-                            <a th:href="@{/libraries/{id}(id=${library.id()})}"
-                               th:text="${library.displayName()}"
+                            <a th:href="@{/libraries/{id}(id=${library.id})}"
+                               th:text="${library.displayName}"
                                class="hover:text-accent transition-colors">Library Name</a>
                         </h3>
-                        <p class="text-sm text-secondary font-mono mt-1" th:text="${library.name()}">library-name</p>
+                        <p class="text-sm text-secondary font-mono mt-1" th:text="${library.name}">library-name</p>
                     </div>
-                    <span th:if="${library.category()}"
+                    <span th:if="${library.category}"
                           class="badge badge-info"
-                          th:text="${library.category()}">Category</span>
+                          th:text="${library.category}">Category</span>
                 </div>
 
                 <!-- 描述 -->
-                <p th:if="${library.description()}"
+                <p th:if="${library.description}"
                    class="mt-3 text-sm text-secondary line-clamp-2"
-                   th:text="${library.description()}">Description goes here...</p>
+                   th:text="${library.description}">Description goes here...</p>
 
                 <!-- 底部資訊 -->
                 <div class="mt-4 flex items-center justify-between">
-                    <span class="text-xs text-tertiary" th:text="${library.sourceType()}">GITHUB</span>
+                    <span class="text-xs text-tertiary" th:text="${library.sourceType}">GITHUB</span>
                     <div class="space-x-2">
-                        <a th:href="@{/libraries/{id}(id=${library.id()})}"
+                        <a th:href="@{/libraries/{id}(id=${library.id})}"
                            class="text-sm text-accent">View</a>
-                        <a th:href="@{/libraries/{id}/edit(id=${library.id()})}"
+                        <a th:href="@{/libraries/{id}/edit(id=${library.id})}"
                            class="text-sm text-secondary hover:text-primary transition-colors">Edit</a>
                     </div>
                 </div>
 
                 <!-- 標籤 -->
-                <div th:if="${library.tags() != null && !library.tags().isEmpty()}" class="mt-3 tags">
-                    <span th:each="tag : ${library.tags()}"
+                <div th:if="${library.tags != null && !library.tags.isEmpty()}" class="mt-3 tags">
+                    <span th:each="tag : ${library.tags}"
                           class="tag"
                           th:text="${tag}">tag</span>
                 </div>

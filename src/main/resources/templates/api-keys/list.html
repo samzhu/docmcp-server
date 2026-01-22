@@ -140,38 +140,38 @@
                 <tbody>
                     <tr th:each="key : ${apiKeys}">
                         <!-- 名稱 -->
-                        <td class="font-medium" th:text="${key.name()}">Key Name</td>
+                        <td class="font-medium" th:text="${key.name}">Key Name</td>
                         <!-- Key Prefix -->
-                        <td class="font-mono text-sm text-secondary" th:text="${key.keyPrefix()}">dmcp_xxxx</td>
+                        <td class="font-mono text-sm text-secondary" th:text="${key.keyPrefix}">dmcp_xxxx</td>
                         <!-- 狀態徽章 -->
                         <td>
-                            <span th:if="${key.status().name() == 'ACTIVE'}" class="badge badge-success">Active</span>
-                            <span th:if="${key.status().name() == 'REVOKED'}" class="badge badge-danger">Revoked</span>
-                            <span th:if="${key.status().name() == 'EXPIRED'}" class="badge badge-warning">Expired</span>
+                            <span th:if="${key.status.name == 'ACTIVE'}" class="badge badge-success">Active</span>
+                            <span th:if="${key.status.name == 'REVOKED'}" class="badge badge-danger">Revoked</span>
+                            <span th:if="${key.status.name == 'EXPIRED'}" class="badge badge-warning">Expired</span>
                         </td>
                         <!-- 速率限制 -->
                         <td th:text="${key.rateLimit() != null ? key.rateLimit() + '/hr' : '-'}">1000/hr</td>
                         <!-- 過期時間 -->
                         <td>
-                            <span th:if="${key.expiresAt() != null}" th:text="${#temporals.format(key.expiresAt(), 'yyyy-MM-dd')}">-</span>
-                            <span th:if="${key.expiresAt() == null}" class="text-secondary">Never</span>
+                            <span th:if="${key.expiresAt != null}" th:text="${#temporals.format(key.expiresAt, 'yyyy-MM-dd')}">-</span>
+                            <span th:if="${key.expiresAt == null}" class="text-secondary">Never</span>
                         </td>
                         <!-- 最後使用時間 -->
                         <td>
-                            <span th:if="${key.lastUsedAt() != null}" th:text="${#temporals.format(key.lastUsedAt(), 'yyyy-MM-dd HH:mm')}">-</span>
-                            <span th:if="${key.lastUsedAt() == null}" class="text-secondary">Never</span>
+                            <span th:if="${key.lastUsedAt != null}" th:text="${#temporals.format(key.lastUsedAt, 'yyyy-MM-dd HH:mm')}">-</span>
+                            <span th:if="${key.lastUsedAt == null}" class="text-secondary">Never</span>
                         </td>
                         <!-- 建立時間 -->
-                        <td th:text="${#temporals.format(key.createdAt(), 'yyyy-MM-dd HH:mm')}">-</td>
+                        <td th:text="${#temporals.format(key.createdAt, 'yyyy-MM-dd HH:mm')}">-</td>
                         <!-- 操作按鈕 -->
                         <td>
-                            <form th:if="${key.status().name() == 'ACTIVE'}"
-                                  th:action="@{/api-keys/{id}/revoke(id=${key.id()})}"
+                            <form th:if="${key.status.name == 'ACTIVE'}"
+                                  th:action="@{/api-keys/{id}/revoke(id=${key.id})}"
                                   method="post"
                                   onsubmit="return confirm('Are you sure you want to revoke this API key? This action cannot be undone.')">
                                 <button type="submit" class="text-sm text-error hover:underline">Revoke</button>
                             </form>
-                            <span th:if="${key.status().name() != 'ACTIVE'}" class="text-sm text-tertiary">-</span>
+                            <span th:if="${key.status.name != 'ACTIVE'}" class="text-sm text-tertiary">-</span>
                         </td>
                     </tr>
                 </tbody>

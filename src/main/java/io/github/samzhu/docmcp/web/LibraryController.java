@@ -9,7 +9,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 
-import java.util.UUID;
 
 /**
  * 函式庫管理頁面控制器
@@ -58,18 +57,20 @@ public class LibraryController {
 
     /**
      * 函式庫詳情頁面
+     *
+     * @param id 函式庫 ID（TSID 格式）
      */
     @GetMapping("/{id}")
-    public String detail(@PathVariable UUID id, Model model) {
+    public String detail(@PathVariable String id, Model model) {
         var library = libraryService.getLibraryById(id);
         var versions = libraryService.getLibraryVersionsById(id);
 
         // 取得每個版本的最新同步狀態
         var syncStatuses = versions.stream()
-                .map(v -> syncService.getLatestSyncHistory(v.id()).orElse(null))
+                .map(v -> syncService.getLatestSyncHistory(v.getId()).orElse(null))
                 .toList();
 
-        model.addAttribute("pageTitle", library.displayName());
+        model.addAttribute("pageTitle", library.getDisplayName());
         model.addAttribute("currentPage", "libraries");
         model.addAttribute("library", library);
         model.addAttribute("versions", versions);
@@ -80,12 +81,14 @@ public class LibraryController {
 
     /**
      * 編輯函式庫頁面
+     *
+     * @param id 函式庫 ID（TSID 格式）
      */
     @GetMapping("/{id}/edit")
-    public String edit(@PathVariable UUID id, Model model) {
+    public String edit(@PathVariable String id, Model model) {
         var library = libraryService.getLibraryById(id);
 
-        model.addAttribute("pageTitle", "Edit " + library.displayName());
+        model.addAttribute("pageTitle", "Edit " + library.getDisplayName());
         model.addAttribute("currentPage", "libraries");
         model.addAttribute("library", library);
         model.addAttribute("sourceTypes", SourceType.values());
