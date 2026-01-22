@@ -728,7 +728,6 @@ MCP Prompts 提供預定義的提示模板，讓使用者在 AI 助手中可以�
 -- 啟用必要的 PostgreSQL 擴充套件
 -- =====================================================
 CREATE EXTENSION IF NOT EXISTS vector;      -- pgvector：向量儲存與相似度搜尋
-CREATE EXTENSION IF NOT EXISTS hstore;      -- 鍵值對儲存（可選）
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp"; -- UUID 生成函數
 
 -- =====================================================

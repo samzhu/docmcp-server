@@ -4,7 +4,6 @@
 -- 啟用必要的 PostgreSQL 擴充功能
 CREATE EXTENSION IF NOT EXISTS vector;
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-CREATE EXTENSION IF NOT EXISTS hstore;
 
 -- 建立 libraries 表（函式庫主表）
 CREATE TABLE IF NOT EXISTS libraries (
