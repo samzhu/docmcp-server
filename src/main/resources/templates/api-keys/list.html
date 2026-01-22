@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/default :: html(content=~{::main-content}, pageTitle=${pageTitle}, currentPage=${currentPage})}">
+<head>
+    <meta charset="UTF-8">
+</head>
+<body>
+    <div th:fragment="main-content" x-data="{ showCreateModal: false }">
+        <!-- 成功/錯誤訊息 -->
+        <div th:if="${successMessage}" class="alert alert-success mb-4">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-5 h-5">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <span th:text="${successMessage}">Success message</span>
+        </div>
+
+        <div th:if="${errorMessage}" class="alert alert-danger mb-4">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-5 h-5">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <span th:text="${errorMessage}">Error message</span>
+        </div>
+
+        <!-- 新產生的金鑰顯示區塊 -->
+        <div th:if="${generatedKey}" class="glass-card-static mb-6 border-success">
+            <div class="flex items-start gap-4">
+                <div class="stat-icon green flex-shrink-0">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+                    </svg>
+                </div>
+                <div class="flex-1">
+                    <h3 class="text-lg font-semibold text-success mb-2">New API Key Created</h3>
+                    <p class="text-sm text-secondary mb-3">
+                        Please save this key now. You won't be able to see it again!
+                    </p>
+                    <div class="bg-gray-100 p-3 rounded-lg font-mono text-sm break-all select-all" th:text="${generatedKey}">
+                        dmcp_xxxxxxxxxxxxx
+                    </div>
+                    <p class="text-xs text-tertiary mt-2">
+                        Key name: <span th:text="${generatedKeyName}">key-name</span>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 頁首區域：標題與新增按鈕 -->
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-2xl font-bold text-primary">API Keys</h2>
+            <button @click="showCreateModal = true" class="btn btn-primary">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                </svg>
+                Create API Key
+            </button>
+        </div>
+
+        <!-- 統計卡片 -->
+        <div class="stats-grid mb-6">
+            <!-- Total 統計 -->
+            <div class="stat-card">
+                <div class="stat-icon blue">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+                    </svg>
+                </div>
+                <div>
+                    <p class="stat-value" th:text="${totalCount}">0</p>
+                    <p class="stat-label">Total Keys</p>
+                </div>
+            </div>
+
+            <!-- Active 統計 -->
+            <div class="stat-card">
+                <div class="stat-icon green">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+                <div>
+                    <p class="stat-value" th:text="${activeCount}">0</p>
+                    <p class="stat-label">Active</p>
+                </div>
+            </div>
+
+            <!-- Revoked 統計 -->
+            <div class="stat-card">
+                <div class="stat-icon red">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+                    </svg>
+                </div>
+                <div>
+                    <p class="stat-value" th:text="${revokedCount}">0</p>
+                    <p class="stat-label">Revoked</p>
+                </div>
+            </div>
+
+            <!-- Expired 統計 -->
+            <div class="stat-card">
+                <div class="stat-icon yellow">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+                <div>
+                    <p class="stat-value" th:text="${expiredCount}">0</p>
+                    <p class="stat-label">Expired</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 空狀態 -->
+        <div th:if="${#lists.isEmpty(apiKeys)}" class="glass-card-static">
+            <div class="empty-state">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+                </svg>
+                <p class="text-lg font-medium">No API keys yet</p>
+                <p class="text-sm mt-2">Create your first API key to start using the MCP endpoint</p>
+                <button @click="showCreateModal = true" class="btn btn-primary mt-4">Create API Key</button>
+            </div>
+        </div>
+
+        <!-- API Key 列表表格 -->
+        <div th:if="${!#lists.isEmpty(apiKeys)}" class="glass-card-static overflow-x-auto">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Key Prefix</th>
+                        <th>Status</th>
+                        <th>Rate Limit</th>
+                        <th>Expires</th>
+                        <th>Last Used</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="key : ${apiKeys}">
+                        <!-- 名稱 -->
+                        <td class="font-medium" th:text="${key.name()}">Key Name</td>
+                        <!-- Key Prefix -->
+                        <td class="font-mono text-sm text-secondary" th:text="${key.keyPrefix()}">dmcp_xxxx</td>
+                        <!-- 狀態徽章 -->
+                        <td>
+                            <span th:if="${key.status().name() == 'ACTIVE'}" class="badge badge-success">Active</span>
+                            <span th:if="${key.status().name() == 'REVOKED'}" class="badge badge-danger">Revoked</span>
+                            <span th:if="${key.status().name() == 'EXPIRED'}" class="badge badge-warning">Expired</span>
+                        </td>
+                        <!-- 速率限制 -->
+                        <td th:text="${key.rateLimit() != null ? key.rateLimit() + '/hr' : '-'}">1000/hr</td>
+                        <!-- 過期時間 -->
+                        <td>
+                            <span th:if="${key.expiresAt() != null}" th:text="${#temporals.format(key.expiresAt(), 'yyyy-MM-dd')}">-</span>
+                            <span th:if="${key.expiresAt() == null}" class="text-secondary">Never</span>
+                        </td>
+                        <!-- 最後使用時間 -->
+                        <td>
+                            <span th:if="${key.lastUsedAt() != null}" th:text="${#temporals.format(key.lastUsedAt(), 'yyyy-MM-dd HH:mm')}">-</span>
+                            <span th:if="${key.lastUsedAt() == null}" class="text-secondary">Never</span>
+                        </td>
+                        <!-- 建立時間 -->
+                        <td th:text="${#temporals.format(key.createdAt(), 'yyyy-MM-dd HH:mm')}">-</td>
+                        <!-- 操作按鈕 -->
+                        <td>
+                            <form th:if="${key.status().name() == 'ACTIVE'}"
+                                  th:action="@{/api-keys/{id}/revoke(id=${key.id()})}"
+                                  method="post"
+                                  onsubmit="return confirm('Are you sure you want to revoke this API key? This action cannot be undone.')">
+                                <button type="submit" class="text-sm text-error hover:underline">Revoke</button>
+                            </form>
+                            <span th:if="${key.status().name() != 'ACTIVE'}" class="text-sm text-tertiary">-</span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- 建立 API Key Modal -->
+        <div x-show="showCreateModal"
+             x-cloak
+             class="modal-overlay"
+             @click.self="showCreateModal = false"
+             x-transition:enter="transition ease-out duration-200"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100"
+             x-transition:leave="transition ease-in duration-150"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0">
+            <div class="modal-content"
+                 @click.stop
+                 x-transition:enter="transition ease-out duration-200"
+                 x-transition:enter-start="opacity-0 scale-95"
+                 x-transition:enter-end="opacity-100 scale-100"
+                 x-transition:leave="transition ease-in duration-150"
+                 x-transition:leave-start="opacity-100 scale-100"
+                 x-transition:leave-end="opacity-0 scale-95">
+
+                <div class="modal-header">
+                    <h3 class="text-lg font-semibold text-primary">Create New API Key</h3>
+                    <button @click="showCreateModal = false" class="modal-close">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <form th:action="@{/api-keys/create}" method="post">
+                    <div class="modal-body space-y-4">
+                        <!-- 名稱 -->
+                        <div>
+                            <label class="form-label" for="key-name">Name <span class="text-error">*</span></label>
+                            <input type="text" id="key-name" name="name" required
+                                   class="form-input"
+                                   placeholder="e.g., Production Key">
+                            <p class="text-xs text-secondary mt-1">A descriptive name to identify this key</p>
+                        </div>
+
+                        <!-- 速率限制 -->
+                        <div>
+                            <label class="form-label" for="rate-limit">Rate Limit (requests/hour)</label>
+                            <input type="number" id="rate-limit" name="rateLimit"
+                                   class="form-input"
+                                   placeholder="1000"
+                                   min="1">
+                            <p class="text-xs text-secondary mt-1">Leave empty for default (1000/hr)</p>
+                        </div>
+
+                        <!-- 過期時間 -->
+                        <div>
+                            <label class="form-label" for="expires-in">Expires In (days)</label>
+                            <select id="expires-in" name="expiresInDays" class="form-input">
+                                <option value="">Never expires</option>
+                                <option value="7">7 days</option>
+                                <option value="30">30 days</option>
+                                <option value="90">90 days</option>
+                                <option value="180">180 days</option>
+                                <option value="365">1 year</option>
+                            </select>
+                        </div>
+
+                        <!-- 警告訊息 -->
+                        <div class="warning-box">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                            </svg>
+                            <p>The API key will only be shown once after creation. Make sure to copy and save it securely.</p>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" @click="showCreateModal = false" class="btn btn-secondary">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Create Key</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

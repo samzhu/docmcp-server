@@ -1,7 +1,7 @@
 # DocMCP Server - Product Requirements Document (PRD)
 
-> **版本**：1.6.0
-> **最後更新**：2026-01-20
+> **版本**：1.7.0
+> **最後更新**：2026-01-22
 > **狀態**：Draft
 > **作者**：samzhu
 
@@ -68,35 +68,50 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
     // Spring MVC，提供 RESTful API 和 Web 端點
     implementation 'org.springframework.boot:spring-boot-starter-web'
-    // JDBC 支援，用於資料庫連線（pgvector 手動配置需要）
-    implementation 'org.springframework.boot:spring-boot-starter-jdbc'
+    // Spring Data JDBC，用於資料庫連線
+    implementation 'org.springframework.boot:spring-boot-starter-data-jdbc'
+    // Jakarta Validation，用於輸入驗證
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    // Spring Security，用於 API Key 認證
+    implementation 'org.springframework.boot:spring-boot-starter-security'
 
     // ===== MCP Server（模型上下文協議伺服器）=====
     // 使用 WebMVC 傳輸層的 MCP Server，支援 Streamable-HTTP 協議
-    // 這是唯一使用 starter 的 Spring AI 套件，因為 MCP 需要自動配置端點
     implementation 'org.springframework.ai:spring-ai-starter-mcp-server-webmvc'
 
-    // ===== Vector Store（向量儲存）- 手動配置 =====
-    // pgvector 向量儲存核心庫（非 starter，需手動建立 Bean）
-    // 選擇手動配置的原因：可完全控制初始化參數和表結構
-    implementation 'org.springframework.ai:spring-ai-pgvector-store'
-    // PostgreSQL JDBC 驅動程式
-    runtimeOnly 'org.postgresql:postgresql'
+    // ===== Vector Store（向量儲存）=====
+    // pgvector 向量儲存（使用 starter 自動配置）
+    implementation 'org.springframework.ai:spring-ai-starter-vector-store-pgvector'
 
-    // ===== Embedding Model（嵌入模型）- 手動配置 =====
-    // Google GenAI 嵌入模型核心庫（非 starter，需手動建立 Bean）
-    // 使用 Gemini gemini-embedding-001，支援 768/1536/3072 維度，成本較 OpenAI 低
-    implementation 'org.springframework.ai:spring-ai-google-genai-embedding'
+    // ===== Embedding Model（嵌入模型）=====
+    // Google GenAI 嵌入模型（使用 starter 自動配置）
+    // 使用 Gemini gemini-embedding-001，支援 768/1536/3072 維度
+    implementation 'org.springframework.ai:spring-ai-starter-model-google-genai-embedding'
+
+    // ===== 文件解析（Document Parsing）=====
+    // HTML 解析（擷取 DOM 元素）
+    implementation 'org.jsoup:jsoup:1.22.1'
+    // 動態網頁渲染（處理 JavaScript 產生的內容）
+    implementation 'org.htmlunit:htmlunit:4.21.0'
+    // Markdown 解析與 HTML 轉 Markdown
+    implementation 'com.vladsch.flexmark:flexmark:0.64.8'
+    implementation 'com.vladsch.flexmark:flexmark-html2md-converter:0.64.8'
+    // AsciiDoc 解析
+    implementation 'org.asciidoctor:asciidoctorj:3.0.1'
+    // 壓縮檔解壓縮（用於 GitHub tarball）
+    implementation 'org.apache.commons:commons-compress:1.28.0'
 
     // ===== Development（開發環境）=====
     // Docker Compose 整合，啟動時自動拉起 compose.yaml 中定義的服務
     developmentOnly 'org.springframework.boot:spring-boot-docker-compose'
-    // Spring AI 的 Docker Compose 支援，提供 AI 相關服務的自動配置
-    developmentOnly 'org.springframework.ai:spring-ai-spring-boot-docker-compose'
+    // 熱重載支援
+    developmentOnly 'org.springframework.boot:spring-boot-devtools'
 
     // ===== Testing（測試）=====
     // Spring Boot 測試框架基礎
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    // Spring Security 測試支援
+    testImplementation 'org.springframework.security:spring-security-test'
     // Testcontainers 整合，用於整合測試時自動啟動容器
     testImplementation 'org.springframework.boot:spring-boot-testcontainers'
     // Spring AI 的 Testcontainers 支援
@@ -105,14 +120,18 @@ dependencies {
     testImplementation 'org.testcontainers:testcontainers-junit-jupiter'
     // PostgreSQL Testcontainer，測試時自動啟動 PostgreSQL + pgvector
     testImplementation 'org.testcontainers:testcontainers-postgresql'
+    // MockWebServer，用於模擬 HTTP 服務
+    testImplementation 'com.squareup.okhttp3:mockwebserver:5.3.2'
 }
 ```
 
-> **為什麼選擇非 starter 版本？**
-> - **完全控制**：可自訂 `EmbeddingModel` 和 `VectorStore` 的所有參數
-> - **彈性配置**：可根據不同環境（開發/測試/生產）使用不同配置
-> - **避免衝突**：starter 的自動配置可能與自訂設定產生衝突
-> - **明確依賴**：程式碼中明確看到 Bean 的建立過程，便於除錯
+> **設計決策：使用 Starter 版本**
+> 專案目前使用 Spring AI 的 starter 版本（`spring-ai-starter-*`），原因：
+> - **簡化配置**：自動配置減少樣板程式碼
+> - **版本相容**：BOM 管理確保所有 Spring AI 元件版本一致
+> - **快速開發**：適合 MVP 階段快速迭代
+>
+> 如需更細緻的控制（如自訂 VectorStore 表結構），可改用非 starter 版本並手動配置 Bean。
 
 ### 2.3 系統架構
 
@@ -247,39 +266,41 @@ public class ExecutorConfig {
 
 ### 3.1 MCP 工具 (Tools)
 
-DocMCP Server 將提供以下 MCP 工具，設計遵循**分層式漸進查詢**模式：
+DocMCP Server 提供以下 MCP 工具，設計遵循**分層式漸進查詢**模式。
+
+> **實作狀態**：✅ 全部 12 個工具已實作完成
 
 #### Level 1: Discovery (發現層)
 
-| 工具 | 說明 | 優先級 |
-|------|------|--------|
-| `list_libraries` | 列出所有可用的文件庫 | P0 |
-| `resolve_library` | 解析函式庫名稱為正規化 ID | P0 |
+| 工具 | 說明 | 優先級 | 狀態 |
+|------|------|--------|------|
+| `list_libraries` | 列出所有可用的文件庫 | P0 | ✅ 已完成 |
+| `resolve_library` | 解析函式庫名稱為正規化 ID | P0 | ✅ 已完成 |
 
 #### Level 2: Search (搜尋層)
 
-| 工具 | 說明 | 優先級 |
-|------|------|--------|
-| `search_docs` | 跨文件庫搜尋文件內容（混合搜尋） | P0 |
-| `semantic_search` | 純語意搜尋，適合概念性查詢 | P1 |
-| `get_api_reference` | 取得特定 API 參考文件 | P1 |
+| 工具 | 說明 | 優先級 | 狀態 |
+|------|------|--------|------|
+| `search_docs` | 跨文件庫搜尋文件內容（混合搜尋） | P0 | ✅ 已完成 |
+| `semantic_search` | 純語意搜尋，適合概念性查詢 | P1 | ✅ 已完成 |
+| `get_api_reference` | 取得特定 API 參考文件 | P1 | ✅ 已完成 |
 
 #### Level 3: Retrieve (獲取層)
 
-| 工具 | 說明 | 優先級 |
-|------|------|--------|
-| `get_doc_content` | 取得特定文件的完整內容 | P0 |
-| `get_doc_toc` | 取得文件目錄結構 | P1 |
-| `get_related_docs` | 取得相關文件推薦 | P1 |
-| `get_code_examples` | 取得程式碼範例 | P1 |
-| `get_migration_guide` | 取得版本遷移指南 | P2 |
+| 工具 | 說明 | 優先級 | 狀態 |
+|------|------|--------|------|
+| `get_doc_content` | 取得特定文件的完整內容 | P0 | ✅ 已完成 |
+| `get_doc_toc` | 取得文件目錄結構 | P1 | ✅ 已完成 |
+| `get_related_docs` | 取得相關文件推薦 | P1 | ✅ 已完成 |
+| `get_code_examples` | 取得程式碼範例 | P1 | ✅ 已完成 |
+| `get_migration_guide` | 取得版本遷移指南 | P2 | ✅ 已完成 |
 
 #### Level 4: Management (管理層)
 
-| 工具 | 說明 | 優先級 |
-|------|------|--------|
-| `list_versions` | 列出函式庫所有版本 | P1 |
-| `get_sync_status` | 取得同步狀態與歷史 | P1 |
+| 工具 | 說明 | 優先級 | 狀態 |
+|------|------|--------|------|
+| `list_versions` | 列出函式庫所有版本 | P1 | ✅ 已完成 |
+| `get_sync_status` | 取得同步狀態與歷史 | P1 | ✅ 已完成 |
 
 ### 3.2 工具詳細規格
 
@@ -608,22 +629,57 @@ public GetSyncStatusResult getSyncStatus(
 
 ### 3.3 MCP 資源 (Resources)
 
-| 資源 URI 模板 | 說明 | 優先級 |
-|---------------|------|--------|
-| `docs://{libraryId}/{version}/{path}` | 文件內容資源 | P0 |
-| `library://{libraryId}` | 函式庫元資料 | P1 |
+> **實作狀態**：✅ 全部 2 個 Resource Provider 已實作完成
 
-### 3.4 Web UI 功能
+| 資源 URI 模板 | 說明 | 優先級 | 狀態 |
+|---------------|------|--------|------|
+| `docs://{libraryName}/{version}/{path}` | 文件內容資源 | P0 | ✅ 已完成 |
+| `docs://{libraryName}/latest/{path}` | 最新版本文件內容 | P0 | ✅ 已完成 |
+| `library://{libraryName}` | 函式庫元資料 | P1 | ✅ 已完成 |
+| `library://{libraryName}/{version}` | 特定版本元資料 | P1 | ✅ 已完成 |
 
-使用 Thymeleaf 建立管理介面：
+### 3.4 MCP Prompts (提示模板)
 
-| 頁面 | 功能 | 優先級 |
-|------|------|--------|
-| **Dashboard** | 系統概覽、統計資訊 | P1 |
-| **Libraries** | 函式庫管理 (新增/編輯/刪除) | P0 |
-| **Documents** | 文件瀏覽與搜尋 | P1 |
-| **Sync Status** | 同步狀態與日誌 | P1 |
-| **Settings** | 系統設定 | P2 |
+> **實作狀態**：✅ 全部 5 個 Prompts 已實作完成
+
+MCP Prompts 提供預定義的提示模板，讓使用者在 AI 助手中可以快速選用（如斜線命令 `/docmcp_explain_library`）。
+
+| Prompt 名稱 | 說明 | 參數 | 狀態 |
+|-------------|------|------|------|
+| `docmcp_explain_library` | 解釋函式庫核心概念和快速入門 | `library`(必要), `version`(選填) | ✅ 已完成 |
+| `docmcp_search_usage` | 搜尋特定功能的使用方式 | `library`(必要), `topic`(必要), `version`(選填) | ✅ 已完成 |
+| `docmcp_compare_versions` | 比較兩個版本的差異 | `library`(必要), `from_version`(必要), `to_version`(選填) | ✅ 已完成 |
+| `docmcp_generate_example` | 生成程式碼範例 | `library`(必要), `api_or_feature`(必要), `language`(選填), `version`(選填) | ✅ 已完成 |
+| `docmcp_troubleshoot` | 根據錯誤訊息提供解決方案 | `library`(必要), `error_or_issue`(必要), `version`(選填) | ✅ 已完成 |
+
+**設計原則**：
+- 每個 Prompt 引導 AI 使用現有的 Tools（`search_docs`、`get_code_examples` 等）
+- 使用 `docmcp_` 前綴，符合 MCP 最佳實踐的 Service-Prefixed Naming
+- 可選參數為 null 時使用預設值（如「最新版本」）
+
+### 3.6 Web UI 功能
+
+使用 Thymeleaf 建立管理介面，採用 Apple Liquid Glass 設計風格。
+
+> **實作狀態**：✅ 核心頁面已完成
+
+**Sidebar 主要入口**：
+
+| 頁面 | 功能 | 優先級 | 狀態 |
+|------|------|--------|------|
+| **Dashboard** | 系統概覽、統計資訊 | P1 | ✅ 已完成 |
+| **Libraries** | 函式庫管理 (列表/詳情/新增/編輯) | P0 | ✅ 已完成 |
+| **Search** | 文件搜尋介面 | P1 | ✅ 已完成 |
+| **Sync Status** | 同步狀態與日誌 (列表/詳情) | P1 | ✅ 已完成 |
+| **API Keys** | API 金鑰管理 | P1 | ✅ 已完成 |
+| **Setup** | 初始設定（MCP 整合指南） | P2 | ✅ 已完成 |
+| **Settings** | 系統設定 | P2 | ✅ 已完成 |
+
+**子頁面**（從主要入口進入）：
+
+| 頁面 | 進入路徑 | 功能 |
+|------|----------|------|
+| **Documents** | Libraries → Library Detail → Version → Browse Docs | 文件瀏覽 (列表/詳情) |
 
 ---
 
@@ -848,210 +904,130 @@ CREATE TRIGGER trigger_update_search_vector
 
 ## 6. 配置設計
 
-### 6.1 application.yml
+### 6.1 application.yaml
 
-所有配置集中在 `application.yml`，支援透過環境變數覆蓋敏感資訊：
+配置採用分層設計，基礎配置在 `application.yaml`，環境特定配置透過 profile 檔案覆蓋：
 
 ```yaml
-# =====================================================
-# Spring 框架基礎配置
-# =====================================================
+# =============================================================================
+# DocMCP Server - 基礎共用配置
+# =============================================================================
 spring:
   application:
-    name: docmcp-server              # 應用程式名稱，用於日誌和監控識別
+    name: DocMCP Server
 
-  # ----- 資料庫連線配置 -----
-  # 使用 PostgreSQL + pgvector
+  threads:
+    virtual:
+      enabled: true  # Java 21+ Virtual Threads
+
+  # ----- 資料庫配置 -----
   datasource:
-    url: jdbc:postgresql://localhost:5432/docmcp   # 資料庫連線 URL
-    username: ${DB_USERNAME:docmcp}                 # 使用者名稱（可透過環境變數覆蓋）
-    password: ${DB_PASSWORD:docmcp}                 # 密碼（建議使用環境變數）
+    url: ${docmcp-db-url:jdbc:postgresql://localhost:5432/mydatabase}
+    username: ${docmcp-db-username:myuser}
+    password: ${docmcp-db-password:secret}
+
+  sql:
+    init:
+      mode: always
+      platform: postgresql
 
   # ----- Spring AI MCP Server 配置 -----
-  # 這部分由 spring-ai-starter-mcp-server-webmvc 自動配置
   ai:
     mcp:
       server:
-        name: DocMCP Server          # MCP Server 名稱（顯示給 AI 助手）
-        version: 1.0.0               # 版本號
-        protocol: STATELESS          # 傳輸協議：STATELESS（無狀態，適合雲端部署）
-        type: SYNC                   # 執行模式：SYNC（同步）或 ASYNC（非同步）
+        protocol: STATELESS          # 無狀態傳輸（適合雲端部署）
+        name: DocMCP Server
+        version: 0.1.0
+        annotation-scanner:
+          enabled: true              # 啟用 MCP 註解掃描
 
-    # 注意：EmbeddingModel 和 VectorStore 使用非 starter 版本
-    # 不使用 spring.ai.openai 或 spring.ai.vectorstore 的自動配置
-    # 而是透過 Section 6.2 的手動 Bean 配置
-
-# =====================================================
-# DocMCP Server 自訂配置
-# 前綴：docmcp.*
-# =====================================================
-docmcp:
-  # ----- Google GenAI 嵌入模型配置 -----
-  # 用於將文字轉換為向量
-  embedding:
-    provider: google-genai           # 嵌入模型提供者（目前只支援 google-genai）
+    # ----- Google GenAI Embedding 配置 -----
     google:
-      api-key: ${GOOGLE_API_KEY:}    # Google API 金鑰【必填】從環境變數讀取
-      model: gemini-embedding-001    # 嵌入模型名稱（text-embedding-004 已於 2026/1/14 停用）
-      dimensions: 768                # 向量維度（選擇 768 以符合 2GB RAM 限制，品質損失僅 0.26%）
-      task-type: RETRIEVAL_DOCUMENT  # 任務類型：RETRIEVAL_DOCUMENT（索引用）
+      genai:
+        embedding:
+          api-key: ${docmcp-google-api-key:}
+          text:
+            options:
+              model: gemini-embedding-001
+              dimensions: 768        # 向量維度
 
-  # ----- pgvector 向量儲存配置 -----
-  # 用於儲存和搜尋向量
-  vectorstore:
-    dimensions: 768                  # 向量維度【必須與 embedding.dimensions 一致】
-    index-type: HNSW                 # 索引類型：HNSW（效能最佳）或 IVFFlat
-    distance-type: COSINE_DISTANCE   # 距離計算方式：餘弦相似度
-    initialize-schema: true          # 啟動時自動建立資料表
-    table-name: document_chunks      # 向量儲存的資料表名稱
+    # ----- PgVector 向量儲存配置 -----
+    vectorstore:
+      pgvector:
+        dimensions: 768
+        distance-type: COSINE_DISTANCE
+        index-type: HNSW
 
-  # ----- 文件來源配置 -----
-  sources:
-    github:
-      token: ${GITHUB_TOKEN:}        # GitHub Personal Access Token（私有倉庫需要）
-      rate-limit: 5000               # 每小時 API 請求上限
-
-  # ----- 同步排程配置 -----
-  # 定期從來源同步文件
-  sync:
-    enabled: true                    # 是否啟用排程同步
-    cron: "0 0 2 * * *"             # Cron 表達式：每天凌晨 2:00 執行
-    # --- 容錯機制（重試策略）---
-    retry:
-      max-attempts: 3                # 失敗時最多重試 3 次
-      backoff-multiplier: 2.0        # 指數退避乘數（1s → 2s → 4s）
-      initial-delay: 1000            # 首次重試延遲：1000 毫秒
-      max-delay: 30000               # 最大延遲上限：30 秒
-    batch-size: 100                  # 每批處理的文件數量
-    timeout: 300000                  # 單一文件處理超時：5 分鐘
-    continue-on-error: true          # 單一文件失敗時繼續處理其他文件
+# =============================================================================
+# DocMCP Server 自訂配置
+# =============================================================================
+docmcp:
+  # ----- 功能開關 -----
+  features:
+    web-ui: true            # Web UI 介面
+    api-key-auth: false     # API Key 認證（生產環境建議開啟）
+    semantic-search: true   # 語意搜尋
+    code-examples: true     # 程式碼範例
+    migration-guides: false # 遷移指南（P2 延後）
+    sync-scheduling: false  # 同步排程
+    concurrency-limit: true # 併發限制
 
   # ----- 搜尋配置 -----
   search:
-    default-limit: 5                 # 預設回傳結果數量
-    max-limit: 20                    # 最大回傳結果數量
-    # --- 混合搜尋參數 ---
-    # 公式：final_score = (1-α) × semantic_score + α × keyword_score
     hybrid:
-      alpha: 0.3                     # α 值：0.3 = 70% 語意 + 30% 關鍵字
-      min-similarity: 0.7            # 最低相似度門檻（低於此分數的結果會被過濾）
-      rerank-enabled: false          # 是否啟用結果重排序（需要額外模型）
+      alpha: 0.3            # 關鍵字權重（30% 關鍵字、70% 語意）
+      min-similarity: 0.5   # 最低相似度閾值
 
-  # ----- 文件區塊化配置 -----
-  # 將長文件切割成小區塊以供向量化
-  chunking:
-    max-size: 1000                   # 每個區塊最大字元數
-    overlap: 200                     # 相鄰區塊重疊字元數（避免斷句問題）
+  # ----- 同步排程配置 -----
+  sync:
+    cron: "0 0 2 * * *"     # 每天凌晨 2 點
 
-  # ----- 功能開關（Feature Toggle）-----
-  # 可獨立啟用或停用各項功能
-  features:
-    web-ui:
-      enabled: true                  # Web 管理介面
-    api-key-auth:
-      enabled: true                  # API Key 認證
-    semantic-search:
-      enabled: true                  # 語意搜尋功能
-    code-examples:
-      enabled: true                  # 程式碼範例擷取
-    migration-guides:
-      enabled: false                 # 遷移指南 (預設關閉)
-    sync-scheduling:
-      enabled: true                  # 排程同步
+  # ----- GitHub 取得配置 -----
+  github:
+    fetch:
+      connect-timeout-ms: 10000
+      read-timeout-ms: 30000
+      archive:
+        enabled: true
+        priority: 1          # 優先使用 tarball 下載
+      git-tree:
+        enabled: true
+        priority: 2
+      contents-api:
+        enabled: true
+        priority: 3
+
+  # ----- 安全配置 -----
+  security:
+    api-key:
+      enabled: false
+      header-name: Authorization
+      prefix: "Bearer "
+      allow-anonymous: true
+    concurrency:
+      default-limit: 10
+      anonymous-limit: 5
 ```
 
-### 6.2 手動 Bean 配置
+### 6.2 配置檔案結構
 
-由於使用非 starter 版本，需要手動配置 `EmbeddingModel` 和 `VectorStore`：
+| 檔案 | 說明 | 用途 |
+|------|------|------|
+| `src/main/resources/application.yaml` | 基礎配置 | 包進 Docker Image |
+| `src/main/resources/application-local.yaml` | 本地開發配置 | 覆蓋資料庫連線等 |
+| `config/application-dev.yaml` | 開發環境配置 | DEBUG 日誌等 |
+| `config/application-secrets.properties` | 敏感資訊 | gitignored |
 
-```java
-@Configuration  // 標記為 Spring 配置類別
-public class AiConfig {
+### 6.3 環境變數
 
-    // ===== 從 application.yml 注入配置值 =====
+敏感資訊透過統一命名的環境變數注入：
 
-    @Value("${docmcp.embedding.google.api-key}")
-    private String googleApiKey;  // Google API 金鑰（從環境變數 GOOGLE_API_KEY 取得）
-
-    @Value("${docmcp.embedding.google.model:gemini-embedding-001}")
-    private String embeddingModel;  // 嵌入模型名稱，預設為 gemini-embedding-001
-
-    @Value("${docmcp.vectorstore.dimensions:768}")
-    private int dimensions;  // 向量維度，選擇 768 以符合 2GB RAM 限制（可選 768/1536/3072）
-
-    /**
-     * Google GenAI 嵌入模型 Bean
-     *
-     * 功能：將文字轉換為向量（支援 768/1536/3072 維度的浮點數陣列）
-     * 用途：文件索引時產生向量、搜尋時將查詢轉為向量
-     *
-     * 認證方式：使用 Google API Key（Gemini Developer API）
-     * 替代方案：也可使用 Vertex AI（需要 GCP 專案 ID 和位置）
-     */
-    @Bean
-    public EmbeddingModel embeddingModel() {
-        // 建立連線配置（使用 API Key 認證）
-        GoogleGenAiEmbeddingConnectionDetails connectionDetails =
-            GoogleGenAiEmbeddingConnectionDetails.builder()
-                .apiKey(googleApiKey)  // 設定 API 金鑰
-                .build();
-
-        // 建立嵌入選項
-        GoogleGenAiTextEmbeddingOptions options = GoogleGenAiTextEmbeddingOptions.builder()
-            .model(embeddingModel)                    // 模型：gemini-embedding-001
-            .taskType(TaskType.RETRIEVAL_DOCUMENT)   // 任務類型：文件檢索（索引用）
-            .outputDimensionality(dimensions)         // 向量維度：768（需手動正規化）
-            .build();
-
-        // 建立並回傳嵌入模型實例
-        return new GoogleGenAiTextEmbeddingModel(connectionDetails, options);
-    }
-
-    /**
-     * PgVector 向量儲存 Bean
-     *
-     * 功能：儲存和檢索向量資料
-     * 用途：儲存文件區塊的向量、執行相似度搜尋
-     *
-     * 底層：PostgreSQL + pgvector 擴充套件
-     * 索引：HNSW（Hierarchical Navigable Small World）
-     *       - 建立較慢但查詢效能最佳
-     *       - 支援最大 2000 維度
-     */
-    @Bean
-    public VectorStore vectorStore(JdbcTemplate jdbcTemplate, EmbeddingModel embeddingModel) {
-        return PgVectorStore.builder(jdbcTemplate, embeddingModel)
-            .dimensions(dimensions)                                    // 向量維度（需與 EmbeddingModel 一致）
-            .distanceType(PgVectorStore.PgDistanceType.COSINE_DISTANCE) // 距離類型：餘弦相似度
-            .indexType(PgVectorStore.PgIndexType.HNSW)                  // 索引類型：HNSW（效能最佳）
-            .initializeSchema(true)                                     // 啟動時自動建立 Schema
-            .schemaName("public")                                       // Schema 名稱
-            .vectorTableName("document_chunks")                         // 資料表名稱
-            .build();
-    }
-}
-```
-
-**重要概念說明：**
-
-| 概念 | 說明 |
-|------|------|
-| **EmbeddingModel** | 將文字轉換為向量的模型，本專案使用 Google Gemini |
-| **VectorStore** | 儲存向量並提供相似度搜尋的資料庫，本專案使用 pgvector |
-| **維度 (Dimensions)** | 向量的長度，gemini-embedding-001 支援 768/1536/3072 維向量 |
-| **HNSW 索引** | 高效能的近似最近鄰搜尋演算法，查詢速度快 |
-| **餘弦相似度** | 衡量兩個向量方向相似程度的指標，值越接近 1 越相似 |
-
-**Google GenAI 支援的 Task Types：**
-
-| Task Type | 說明 | 使用場景 |
-|-----------|------|----------|
-| `RETRIEVAL_DOCUMENT` | 文件檢索 | 索引文件時使用（預設）|
-| `RETRIEVAL_QUERY` | 查詢檢索 | 搜尋查詢時使用 |
-| `SEMANTIC_SIMILARITY` | 語意相似度 | 比較文件相似度 |
-| `CLASSIFICATION` | 分類 | 文件分類任務 |
-
-> **最佳實踐**：索引時使用 `RETRIEVAL_DOCUMENT`，搜尋時使用 `RETRIEVAL_QUERY`。
+| 環境變數 | 說明 | 必要性 |
+|----------|------|--------|
+| `docmcp-google-api-key` | Google GenAI API Key | 必要 |
+| `docmcp-db-url` | 資料庫連線 URL | 必要 |
+| `docmcp-db-username` | 資料庫使用者名稱 | 必要 |
+| `docmcp-db-password` | 資料庫密碼 | 必要 |
 
 ### 6.4 功能開關模式
 
@@ -1376,3 +1352,4 @@ docmcp:
 | 1.4.0 | 2026-01-19 | 更新為 gemini-embedding-001（text-embedding-004 已於 2026/1/14 停用），使用 768 維度以符合 2GB RAM 限制，修正 JEP 444 描述 | samzhu |
 | 1.5.0 | 2026-01-19 | MCP 協議改為 STATELESS（適合雲端部署、無狀態水平擴展），修正 spring.ai.mcp.server.protocol 設定 | samzhu |
 | 1.6.0 | 2026-01-20 | 明確 HTTPS 由外部處理（Cloud Run 等反向代理），應用層不需處理 | samzhu |
+| 1.7.0 | 2026-01-22 | 同步專案現狀：更新 Gradle 依賴（改用 starter 版本）、標記所有 MCP Tools/Resources 為已完成、新增 MCP Prompts 章節（5 個 Prompts）、更新 Web UI 頁面清單 | Claude |

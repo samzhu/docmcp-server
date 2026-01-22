@@ -2,7 +2,6 @@ package io.github.samzhu.docmcp.service;
 
 import io.github.samzhu.docmcp.config.KnownDocsPathsProperties;
 import io.github.samzhu.docmcp.domain.enums.SourceType;
-import io.github.samzhu.docmcp.domain.enums.VersionStatus;
 import io.github.samzhu.docmcp.domain.exception.LibraryNotFoundException;
 import io.github.samzhu.docmcp.domain.model.Library;
 import io.github.samzhu.docmcp.domain.model.LibraryVersion;
@@ -55,17 +54,20 @@ public class LibraryService {
     private final GitHubClient gitHubClient;
     private final KnownDocsPathsProperties knownDocsPathsProperties;
     private final SyncService syncService;
+    private final VersionService versionService;
 
     public LibraryService(LibraryRepository libraryRepository,
                           LibraryVersionRepository libraryVersionRepository,
                           GitHubClient gitHubClient,
                           KnownDocsPathsProperties knownDocsPathsProperties,
-                          SyncService syncService) {
+                          SyncService syncService,
+                          VersionService versionService) {
         this.libraryRepository = libraryRepository;
         this.libraryVersionRepository = libraryVersionRepository;
         this.gitHubClient = gitHubClient;
         this.knownDocsPathsProperties = knownDocsPathsProperties;
         this.syncService = syncService;
+        this.versionService = versionService;
     }
 
     /**
@@ -89,6 +91,7 @@ public class LibraryService {
      * <p>
      * 根據函式庫名稱和版本號解析出完整的函式庫和版本資訊。
      * 若未指定版本，則使用最新版本。
+     * 委派給 VersionService 處理版本解析邏輯。
      * </p>
      *
      * @param name    函式庫名稱
@@ -101,35 +104,24 @@ public class LibraryService {
         var library = libraryRepository.findByName(name)
                 .orElseThrow(() -> LibraryNotFoundException.byName(name));
 
-        // 解析版本
-        LibraryVersion resolvedVersion;
-        if (version != null && !version.isBlank()) {
-            // 使用指定版本
-            resolvedVersion = libraryVersionRepository.findByLibraryIdAndVersion(library.id(), version)
-                    .orElseThrow(() -> new LibraryNotFoundException(
-                            "版本 " + version + " 不存在於函式庫: " + name));
-        } else {
-            // 使用最新版本
-            resolvedVersion = libraryVersionRepository.findLatestByLibraryId(library.id())
-                    .orElseThrow(() -> new LibraryNotFoundException(
-                            "函式庫 " + name + " 沒有可用的版本"));
-        }
+        // 委派給 VersionService 解析版本
+        LibraryVersion resolvedVersion = versionService.resolveVersion(library.id(), version);
 
         return new ResolvedLibrary(library, resolvedVersion, resolvedVersion.version());
     }
 
     /**
      * 取得函式庫的所有版本
+     * <p>
+     * 委派給 VersionService 處理。
+     * </p>
      *
      * @param libraryName 函式庫名稱
      * @return 版本列表
      * @throws LibraryNotFoundException 若函式庫不存在
      */
     public List<LibraryVersion> getLibraryVersions(String libraryName) {
-        var library = libraryRepository.findByName(libraryName)
-                .orElseThrow(() -> LibraryNotFoundException.byName(libraryName));
-
-        return libraryVersionRepository.findByLibraryId(library.id());
+        return versionService.getVersionsByLibraryName(libraryName);
     }
 
     /**
@@ -219,27 +211,30 @@ public class LibraryService {
 
     /**
      * 根據函式庫 ID 取得所有版本
+     * <p>
+     * 委派給 VersionService 處理。
+     * </p>
      *
      * @param libraryId 函式庫 ID
      * @return 版本列表
      * @throws LibraryNotFoundException 若函式庫不存在
      */
     public List<LibraryVersion> getLibraryVersionsById(UUID libraryId) {
-        // 確認函式庫存在
-        getLibraryById(libraryId);
-        return libraryVersionRepository.findByLibraryId(libraryId);
+        return versionService.getVersionsByLibraryId(libraryId);
     }
 
     /**
      * 根據版本 ID 取得版本
+     * <p>
+     * 委派給 VersionService 處理。
+     * </p>
      *
      * @param versionId 版本 ID
      * @return 版本
      * @throws LibraryNotFoundException 若版本不存在
      */
     public LibraryVersion getVersionById(UUID versionId) {
-        return libraryVersionRepository.findById(versionId)
-                .orElseThrow(() -> new LibraryNotFoundException("版本不存在: " + versionId));
+        return versionService.getVersionById(versionId);
     }
 
     /**
@@ -296,6 +291,9 @@ public class LibraryService {
 
     /**
      * 建立新版本
+     * <p>
+     * 委派給 VersionService 處理。
+     * </p>
      *
      * @param libraryId   函式庫 ID
      * @param version     版本號
@@ -308,49 +306,7 @@ public class LibraryService {
     @Transactional
     public LibraryVersion createVersion(UUID libraryId, String version, String docsPath,
                                          LocalDate releaseDate, boolean isLatest) {
-        // 確認函式庫存在
-        getLibraryById(libraryId);
-
-        // 檢查版本是否已存在
-        if (libraryVersionRepository.findByLibraryIdAndVersion(libraryId, version).isPresent()) {
-            throw new IllegalArgumentException("版本已存在: " + version);
-        }
-
-        // 若設為最新版本，需先將其他版本的 isLatest 設為 false
-        if (isLatest) {
-            libraryVersionRepository.findLatestByLibraryId(libraryId)
-                    .ifPresent(existingLatest -> {
-                        LibraryVersion updated = new LibraryVersion(
-                                existingLatest.id(),
-                                existingLatest.libraryId(),
-                                existingLatest.version(),
-                                false,
-                                existingLatest.isLts(),
-                                existingLatest.status(),
-                                existingLatest.docsPath(),
-                                existingLatest.releaseDate(),
-                                existingLatest.createdAt(),
-                                null
-                        );
-                        libraryVersionRepository.save(updated);
-                    });
-        }
-
-        // 建立新版本
-        LibraryVersion newVersion = new LibraryVersion(
-                null,
-                libraryId,
-                version,
-                isLatest,
-                false,
-                VersionStatus.ACTIVE,
-                docsPath,
-                releaseDate,
-                null,
-                null
-        );
-
-        return libraryVersionRepository.save(newVersion);
+        return versionService.createVersion(libraryId, version, docsPath, releaseDate, isLatest);
     }
 
     /**
@@ -448,18 +404,15 @@ public class LibraryService {
 
     /**
      * 正規化版本號（移除 v 或 V 前綴）
+     * <p>
+     * 委派給 VersionService 處理。
+     * </p>
      *
      * @param tagName 標籤名稱
      * @return 正規化後的版本號
      */
     private String normalizeVersion(String tagName) {
-        if (tagName == null) {
-            return null;
-        }
-        if (tagName.startsWith("v") || tagName.startsWith("V")) {
-            return tagName.substring(1);
-        }
-        return tagName;
+        return versionService.normalizeVersion(tagName);
     }
 
     /**

@@ -41,4 +41,14 @@ public record SearchResultItem(
                                               int chunkIndex) {
         return new SearchResultItem(documentId, chunkId, title, path, content, score, chunkIndex);
     }
+
+    /**
+     * 複製此搜尋結果並更新分數
+     *
+     * @param newScore 新的分數
+     * @return 更新分數後的新搜尋結果項目
+     */
+    public SearchResultItem withScore(double newScore) {
+        return new SearchResultItem(documentId, chunkId, title, path, content, newScore, chunkIndex);
+    }
 }

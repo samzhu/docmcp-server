@@ -109,30 +109,28 @@ class SearchApiControllerTest {
     @Test
     @WithMockUser
     void shouldSearchWithHybridMode() throws Exception {
+        // 測試 hybrid 模式：現在使用 RRF 演算法的 hybridSearch 方法
         var libraryId = UUID.randomUUID();
         var library = new Library(
                 libraryId, "spring-boot", "Spring Boot", null,
                 SourceType.GITHUB, null, "backend", null, null, null
         );
-        var fulltextResults = List.of(
+        // RRF 演算法合併後的結果
+        var hybridResults = List.of(
                 SearchResultItem.fromDocument(
                         UUID.randomUUID(), "Quick Start", "/docs/quick-start.md",
-                        "Quick start guide...", 1.0
-                )
-        );
-        var semanticResults = List.of(
+                        "Quick start guide...", 0.0164
+                ),
                 SearchResultItem.fromChunk(
                         UUID.randomUUID(), UUID.randomUUID(),
                         "Introduction", "/docs/intro.md",
-                        "Introduction to...", 0.9, 0
+                        "Introduction to...", 0.0115, 0
                 )
         );
 
         when(libraryService.listLibraries(null)).thenReturn(List.of(library));
-        when(searchService.fullTextSearch(eq(libraryId), any(), any(), anyInt()))
-                .thenReturn(fulltextResults);
-        when(searchService.semanticSearch(eq(libraryId), any(), any(), anyInt(), anyDouble()))
-                .thenReturn(semanticResults);
+        when(searchService.hybridSearch(eq(libraryId), any(), eq("quick start"), eq(10)))
+                .thenReturn(hybridResults);
 
         mockMvc.perform(get("/api/search")
                         .param("query", "quick start")

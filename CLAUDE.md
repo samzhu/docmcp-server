@@ -2,7 +2,11 @@
 
 程式碼都要寫上好理解的繁體中文註解
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+## PRD 文件維護
+
+**重要**：當實作新功能或修改現有功能時，必須同步更新 PRD 文件以保持一致性。
+- **PRD 位置**：`docs/PRD.md`
+- **更新變更記錄**：在 PRD 末尾的「變更記錄」表格新增一行
 
 ## Project Overview
 
@@ -63,17 +67,22 @@ src/main/java/io/github/samzhu/docmcp/
 ├── service/          # Business logic (LibraryService, SearchService, EmbeddingService, SyncService)
 ├── infrastructure/
 │   ├── github/       # GitHub API client for fetching docs
+│   ├── local/        # Local file client
 │   └── parser/       # Document parsers (Markdown, AsciiDoc, HTML)
 ├── mcp/
 │   ├── tool/         # MCP tools organized by layer
 │   │   ├── discovery/  # list_libraries, resolve_library
-│   │   ├── search/     # search_docs, semantic_search
-│   │   └── retrieve/   # get_doc_content, get_code_examples
+│   │   ├── search/     # search_docs, semantic_search, get_api_reference
+│   │   ├── retrieve/   # get_doc_content, get_code_examples, get_doc_toc, get_related_docs, get_migration_guide
+│   │   └── management/ # list_versions, get_sync_status
+│   ├── resource/     # MCP resources (DocResourceProvider, LibraryResourceProvider)
+│   ├── prompt/       # MCP prompts (DocMcpPrompts)
 │   └── dto/          # MCP request/response DTOs
 ├── web/
-│   ├── api/          # REST API controllers (LibraryApiController, SearchApiController, SyncApiController)
+│   ├── api/          # REST API controllers
 │   └── dto/          # Web DTOs
-└── security/         # API key authentication (ApiKeyService, ApiKeyAuthenticationFilter)
+├── security/         # API key authentication (ApiKeyService, ApiKeyAuthenticationFilter)
+└── scheduler/        # Scheduled tasks (SyncScheduler)
 ```
 
 ## Key Design Patterns
@@ -97,7 +106,23 @@ Environment variables for secrets:
 ## MCP Endpoint
 
 - `POST /mcp` - Stateless MCP JSON-RPC endpoint
-- Registered tools: `list_libraries`, `resolve_library`, `search_docs`, `semantic_search`, `get_doc_content`, `get_code_examples`
+
+**Tools (12 個)**：
+- Discovery: `list_libraries`, `resolve_library`
+- Search: `search_docs`, `semantic_search`, `get_api_reference`
+- Retrieve: `get_doc_content`, `get_code_examples`, `get_doc_toc`, `get_related_docs`, `get_migration_guide`
+- Management: `list_versions`, `get_sync_status`
+
+**Resources (2 個 Provider)**：
+- `docs://{libraryName}/{version}/{path}` - 文件內容
+- `library://{libraryName}` - 函式庫元資料
+
+**Prompts (5 個)**：
+- `docmcp_explain_library` - 解釋函式庫核心概念
+- `docmcp_search_usage` - 搜尋功能使用方式
+- `docmcp_compare_versions` - 比較版本差異
+- `docmcp_generate_example` - 生成程式碼範例
+- `docmcp_troubleshoot` - 故障排除
 
 ## Database
 

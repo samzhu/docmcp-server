@@ -44,6 +44,9 @@ class LibraryServiceTest {
     @Mock
     private SyncService syncService;
 
+    @Mock
+    private VersionService versionService;
+
     private LibraryService libraryService;
 
     @BeforeEach
@@ -53,7 +56,8 @@ class LibraryServiceTest {
                 libraryVersionRepository,
                 gitHubClient,
                 knownDocsPathsProperties,
-                syncService
+                syncService,
+                versionService
         );
     }
 
@@ -89,10 +93,11 @@ class LibraryServiceTest {
     @Test
     void shouldResolveLibraryWithLatestVersion() {
         // 測試解析函式庫的最新版本
+        // LibraryService 委派版本解析給 VersionService
         var library = createLibrary("spring-boot", "Spring Boot", "backend");
         var version = createVersion(library.id(), "3.2.0", true);
         when(libraryRepository.findByName("spring-boot")).thenReturn(Optional.of(library));
-        when(libraryVersionRepository.findLatestByLibraryId(library.id())).thenReturn(Optional.of(version));
+        when(versionService.resolveVersion(library.id(), null)).thenReturn(version);
 
         var result = libraryService.resolveLibrary("spring-boot", null);
 
@@ -104,11 +109,11 @@ class LibraryServiceTest {
     @Test
     void shouldResolveLibraryWithSpecificVersion() {
         // 測試解析函式庫的指定版本
+        // LibraryService 委派版本解析給 VersionService
         var library = createLibrary("spring-boot", "Spring Boot", "backend");
         var version = createVersion(library.id(), "3.1.0", false);
         when(libraryRepository.findByName("spring-boot")).thenReturn(Optional.of(library));
-        when(libraryVersionRepository.findByLibraryIdAndVersion(library.id(), "3.1.0"))
-                .thenReturn(Optional.of(version));
+        when(versionService.resolveVersion(library.id(), "3.1.0")).thenReturn(version);
 
         var result = libraryService.resolveLibrary("spring-boot", "3.1.0");
 
@@ -128,14 +133,14 @@ class LibraryServiceTest {
     @Test
     void shouldGetLibraryVersions() {
         // 測試取得函式庫的所有版本
+        // LibraryService 委派版本查詢給 VersionService
         var library = createLibrary("spring-boot", "Spring Boot", "backend");
         var versions = List.of(
                 createVersion(library.id(), "3.2.0", true),
                 createVersion(library.id(), "3.1.0", false),
                 createVersion(library.id(), "2.7.0", false)
         );
-        when(libraryRepository.findByName("spring-boot")).thenReturn(Optional.of(library));
-        when(libraryVersionRepository.findByLibraryId(library.id())).thenReturn(versions);
+        when(versionService.getVersionsByLibraryName("spring-boot")).thenReturn(versions);
 
         var result = libraryService.getLibraryVersions("spring-boot");
 

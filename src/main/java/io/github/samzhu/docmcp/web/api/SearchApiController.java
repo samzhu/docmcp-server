@@ -9,8 +9,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
@@ -69,37 +67,10 @@ public class SearchApiController {
         List<SearchResultItem> results = switch (mode.toLowerCase()) {
             case "fulltext" -> searchService.fullTextSearch(libraryId, version, query, limit);
             case "semantic" -> searchService.semanticSearch(libraryId, version, query, limit, DEFAULT_SEMANTIC_THRESHOLD);
-            case "hybrid" -> performHybridSearch(libraryId, version, query, limit);
+            case "hybrid" -> searchService.hybridSearch(libraryId, version, query, limit);
             default -> throw new IllegalArgumentException("不支援的搜尋模式: " + mode);
         };
 
         return SearchResultDto.from(query, mode, results);
-    }
-
-    /**
-     * 執行混合搜尋（結合全文和語意搜尋）
-     */
-    private List<SearchResultItem> performHybridSearch(UUID libraryId, String version, String query, int limit) {
-        // 同時執行全文搜尋和語意搜尋
-        List<SearchResultItem> fulltextResults = searchService.fullTextSearch(libraryId, version, query, limit);
-        List<SearchResultItem> semanticResults = searchService.semanticSearch(libraryId, version, query, limit, DEFAULT_SEMANTIC_THRESHOLD);
-
-        // 合併結果，去除重複
-        List<SearchResultItem> combined = new ArrayList<>(fulltextResults);
-        for (SearchResultItem item : semanticResults) {
-            boolean exists = combined.stream()
-                    .anyMatch(existing -> existing.documentId().equals(item.documentId()) &&
-                            (existing.chunkId() == null && item.chunkId() == null ||
-                             existing.chunkId() != null && existing.chunkId().equals(item.chunkId())));
-            if (!exists) {
-                combined.add(item);
-            }
-        }
-
-        // 依分數排序並限制數量
-        return combined.stream()
-                .sorted(Comparator.comparingDouble(SearchResultItem::score).reversed())
-                .limit(limit)
-                .toList();
     }
 }

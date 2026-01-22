@@ -39,6 +39,9 @@ spring:
         protocol: STATELESS
         name: DocMCP Server
         version: 0.1.0
+        # 啟用 MCP 註解掃描（@McpTool、@McpResource、@McpPrompt）
+        annotation-scanner:
+          enabled: true
 
     # Google GenAI Embedding 配置
     google:
@@ -100,6 +103,15 @@ docmcp:
     migration-guides: false # 遷移指南功能（P2 延後）
     sync-scheduling: false  # 同步排程功能（預設關閉）
     concurrency-limit: true # 併發限制功能（生產環境建議開啟）
+
+  # ----- 搜尋配置 -----
+  search:
+    hybrid:
+      # alpha: 關鍵字搜尋權重（0-1），預設 0.3 表示 30% 關鍵字、70% 語意
+      # 使用 RRF（Reciprocal Rank Fusion）演算法融合搜尋結果
+      alpha: 0.3
+      # 語意搜尋的最低相似度閾值（0-1）
+      min-similarity: 0.5
 
   # ----- 同步排程配置 -----
   sync:

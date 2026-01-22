@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{layout/default :: html(content=~{::main-content}, pageTitle=${pageTitle}, currentPage=${currentPage})}">
+<head>
+    <meta charset="UTF-8">
+</head>
+<body>
+    <div th:fragment="main-content">
+        <!-- 頁首區域：標題 -->
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-2xl font-bold text-primary">Sync Status</h2>
+        </div>
+
+        <!-- 統計卡片 -->
+        <div class="stats-grid mb-6">
+            <!-- Total 統計 -->
+            <div class="stat-card">
+                <div class="stat-icon blue">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                    </svg>
+                </div>
+                <div>
+                    <p class="stat-value" th:text="${totalCount}">0</p>
+                    <p class="stat-label">Total Syncs</p>
+                </div>
+            </div>
+
+            <!-- Success 統計 -->
+            <div class="stat-card">
+                <div class="stat-icon green">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+                <div>
+                    <p class="stat-value" th:text="${successCount}">0</p>
+                    <p class="stat-label">Success</p>
+                </div>
+            </div>
+
+            <!-- Failed 統計 -->
+            <div class="stat-card">
+                <div class="stat-icon red">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+                <div>
+                    <p class="stat-value" th:text="${failedCount}">0</p>
+                    <p class="stat-label">Failed</p>
+                </div>
+            </div>
+
+            <!-- Running 統計 -->
+            <div class="stat-card">
+                <div class="stat-icon yellow">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+                <div>
+                    <p class="stat-value" th:text="${runningCount}">0</p>
+                    <p class="stat-label">Running</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 篩選區塊 -->
+        <div class="glass-card-static mb-6">
+            <form th:action="@{/sync}" method="get" class="flex flex-wrap gap-4 items-end">
+                <!-- 狀態篩選 -->
+                <div class="flex-1 min-w-48">
+                    <label class="block text-sm font-medium text-secondary mb-2">Status</label>
+                    <select name="status" class="input-field w-full">
+                        <option value="">All Statuses</option>
+                        <option value="SUCCESS" th:selected="${selectedStatus != null && selectedStatus.name() == 'SUCCESS'}">Success</option>
+                        <option value="FAILED" th:selected="${selectedStatus != null && selectedStatus.name() == 'FAILED'}">Failed</option>
+                        <option value="RUNNING" th:selected="${selectedStatus != null && selectedStatus.name() == 'RUNNING'}">Running</option>
+                        <option value="PENDING" th:selected="${selectedStatus != null && selectedStatus.name() == 'PENDING'}">Pending</option>
+                    </select>
+                </div>
+
+                <!-- 函式庫篩選 -->
+                <div class="flex-1 min-w-48">
+                    <label class="block text-sm font-medium text-secondary mb-2">Library</label>
+                    <select name="libraryId" class="input-field w-full">
+                        <option value="">All Libraries</option>
+                        <option th:each="lib : ${libraries}"
+                                th:value="${lib.id()}"
+                                th:text="${lib.displayName()}"
+                                th:selected="${selectedLibraryId != null && selectedLibraryId.equals(lib.id())}">Library</option>
+                    </select>
+                </div>
+
+                <!-- 篩選按鈕 -->
+                <div>
+                    <button type="submit" class="btn btn-primary">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" class="w-4 h-4">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"/>
+                        </svg>
+                        Filter
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- 空狀態 -->
+        <div th:if="${#lists.isEmpty(syncHistories)}" class="glass-card-static">
+            <div class="empty-state">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+                <p class="text-lg font-medium">No sync history found</p>
+                <p class="text-sm mt-2">Sync history will appear here after you trigger a sync</p>
+                <a th:href="@{/libraries}" class="btn btn-primary mt-4">Go to Libraries</a>
+            </div>
+        </div>
+
+        <!-- 同步記錄表格 -->
+        <div th:if="${!#lists.isEmpty(syncHistories)}" class="glass-card-static overflow-x-auto">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Library</th>
+                        <th>Version</th>
+                        <th>Status</th>
+                        <th>Documents</th>
+                        <th>Chunks</th>
+                        <th>Duration</th>
+                        <th>Started</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="sync : ${syncHistories}">
+                        <!-- 函式庫名稱 -->
+                        <td>
+                            <a th:if="${sync.libraryId() != null}"
+                               th:href="@{/libraries/{id}(id=${sync.libraryId()})}"
+                               th:text="${sync.libraryDisplayName()}"
+                               class="text-accent hover:underline">Library</a>
+                            <span th:if="${sync.libraryId() == null}" class="text-secondary">Unknown</span>
+                        </td>
+                        <!-- 版本號 -->
+                        <td class="font-mono text-sm" th:text="${sync.versionNumber()}">1.0.0</td>
+                        <!-- 狀態徽章 -->
+                        <td>
+                            <span th:if="${sync.status().name() == 'SUCCESS'}" class="badge badge-success">Success</span>
+                            <span th:if="${sync.status().name() == 'RUNNING'}" class="badge badge-info">Running</span>
+                            <span th:if="${sync.status().name() == 'FAILED'}" class="badge badge-danger">Failed</span>
+                            <span th:if="${sync.status().name() == 'PENDING'}" class="badge badge-warning">Pending</span>
+                        </td>
+                        <!-- 已處理文件數 -->
+                        <td th:text="${sync.documentsProcessed() != null ? sync.documentsProcessed() : '-'}">0</td>
+                        <!-- 已建立區塊數 -->
+                        <td th:text="${sync.chunksCreated() != null ? sync.chunksCreated() : '-'}">0</td>
+                        <!-- 執行時間 -->
+                        <td>
+                            <span th:if="${sync.duration() != null}" th:text="${sync.duration() + 's'}">-</span>
+                            <span th:if="${sync.duration() == null}" class="text-secondary">-</span>
+                        </td>
+                        <!-- 開始時間 -->
+                        <td th:text="${#temporals.format(sync.startedAt(), 'yyyy-MM-dd HH:mm')}">-</td>
+                        <!-- 操作按鈕 -->
+                        <td>
+                            <a th:href="@{/sync/{id}(id=${sync.id()})}"
+                               class="text-sm text-accent hover:underline">View Details</a>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+</html>
