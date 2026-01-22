@@ -1,6 +1,7 @@
 package io.github.samzhu.docmcp.config;
 
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -20,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest(classes = KnownDocsPathsPropertiesIntegrationTest.TestConfig.class)
 @ActiveProfiles("test-known-docs")
 @DisplayName("KnownDocsPathsProperties 整合測試")
+@Tag("integration")
 class KnownDocsPathsPropertiesIntegrationTest {
 
     @EnableConfigurationProperties(KnownDocsPathsProperties.class)

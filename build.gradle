@@ -63,6 +63,30 @@ dependencyManagement {
 	}
 }
 
+// ==================== 測試配置（使用 JUnit 5 @Tag 區分） ====================
+// 單元測試：./gradlew test
+// 整合測試：./gradlew integrationTest
+// 所有測試：./gradlew test integrationTest
+
 tasks.named('test') {
-	useJUnitPlatform()
+	useJUnitPlatform {
+		// 預設排除整合測試
+		excludeTags 'integration'
+	}
+}
+
+// 整合測試（需要網路、Docker 或外部服務）
+tasks.register('integrationTest', Test) {
+	description = '執行整合測試（@Tag("integration")）'
+	group = 'verification'
+	testClassesDirs = sourceSets.test.output.classesDirs
+	classpath = sourceSets.test.runtimeClasspath
+	useJUnitPlatform {
+		includeTags 'integration'
+	}
+	shouldRunAfter test
+	testLogging {
+		events "passed", "skipped", "failed"
+		showStandardStreams = true
+	}
 }

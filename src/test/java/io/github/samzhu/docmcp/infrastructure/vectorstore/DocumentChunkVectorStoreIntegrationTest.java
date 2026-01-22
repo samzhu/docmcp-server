@@ -6,6 +6,7 @@ import io.github.samzhu.docmcp.TestcontainersConfiguration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.embedding.EmbeddingModel;
@@ -35,6 +36,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Import({TestcontainersConfiguration.class, TestConfig.class})
 @ActiveProfiles("test")
 @DisplayName("DocumentChunkVectorStore 整合測試")
+@Tag("integration")
 class DocumentChunkVectorStoreIntegrationTest {
 
     @Autowired

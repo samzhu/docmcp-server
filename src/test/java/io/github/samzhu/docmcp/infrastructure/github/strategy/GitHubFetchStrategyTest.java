@@ -221,13 +221,8 @@ class GitHubFetchStrategyTest {
         @BeforeEach
         void setUp() {
             GitHubFetchProperties properties = createDefaultProperties();
-            RestClient restClient = RestClient.builder().baseUrl(baseUrl).build();
 
-            strategy = new TestableArchiveFetchStrategy(
-                    restClient,
-                    properties,
-                    baseUrl
-            );
+            strategy = new ArchiveFetchStrategy(properties);
         }
 
         @Test
@@ -482,12 +477,4 @@ class GitHubFetchStrategyTest {
         }
     }
 
-    /**
-     * 可測試的 ArchiveFetchStrategy
-     */
-    private static class TestableArchiveFetchStrategy extends ArchiveFetchStrategy {
-        public TestableArchiveFetchStrategy(RestClient restClient, GitHubFetchProperties properties, String baseUrl) {
-            super(RestClient.builder(), properties);
-        }
-    }
 }

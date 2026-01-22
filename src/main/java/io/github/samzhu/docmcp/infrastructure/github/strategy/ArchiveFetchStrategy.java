@@ -8,17 +8,20 @@ import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestClient;
 
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -52,18 +55,31 @@ import java.util.Optional;
 public class ArchiveFetchStrategy implements GitHubFetchStrategy {
 
     private static final Logger log = LoggerFactory.getLogger(ArchiveFetchStrategy.class);
-    private static final String GITHUB_ARCHIVE_URL = "https://github.com/%s/%s/archive/refs/tags/%s.tar.gz";
+
+    // 使用 codeload.github.com 直接下載，避免 302 重定向問題
+    // 原始 URL: https://github.com/{owner}/{repo}/archive/refs/tags/{ref}.tar.gz
+    // 會重定向到: https://codeload.github.com/{owner}/{repo}/tar.gz/refs/tags/{ref}
+    private static final String GITHUB_CODELOAD_URL = "https://codeload.github.com/%s/%s/tar.gz/refs/tags/%s";
 
     // 支援的文件副檔名
     private static final List<String> SUPPORTED_EXTENSIONS = List.of(
             ".md", ".markdown", ".adoc", ".asciidoc", ".html", ".htm", ".txt", ".rst"
     );
 
-    private final RestClient restClient;
+    private final HttpClient httpClient;
     private final GitHubFetchProperties properties;
 
-    public ArchiveFetchStrategy(RestClient.Builder restClientBuilder, GitHubFetchProperties properties) {
-        this.restClient = restClientBuilder.build();
+    /**
+     * 建構子
+     * <p>
+     * 使用 JDK HttpClient，支援 HTTP/2 和自動跟隨重定向。
+     * </p>
+     */
+    public ArchiveFetchStrategy(GitHubFetchProperties properties) {
+        this.httpClient = HttpClient.newBuilder()
+                .followRedirects(HttpClient.Redirect.NORMAL)
+                .connectTimeout(Duration.ofMillis(properties.getConnectTimeoutMs()))
+                .build();
         this.properties = properties;
     }
 
@@ -86,7 +102,7 @@ public class ArchiveFetchStrategy implements GitHubFetchStrategy {
 
     @Override
     public Optional<FetchResult> fetch(String owner, String repo, String path, String ref) {
-        String url = String.format(GITHUB_ARCHIVE_URL, owner, repo, ref);
+        String url = String.format(GITHUB_CODELOAD_URL, owner, repo, ref);
         log.info("嘗試下載 Archive: {}", url);
 
         // 使用 OS 暫存目錄，避免大檔案導致 OOM
@@ -96,19 +112,25 @@ public class ArchiveFetchStrategy implements GitHubFetchStrategy {
             tempFile = Files.createTempFile("docmcp-archive-", ".tar.gz");
             log.debug("建立暫存檔: {}", tempFile);
 
-            // 串流下載到暫存檔，避免整個檔案載入記憶體
-            Resource resource = restClient.get()
-                    .uri(url)
-                    .retrieve()
-                    .body(Resource.class);
+            // 使用 HttpClient 下載（支援 HTTP/2 和自動跟隨重定向）
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(url))
+                    .header("User-Agent", "DocMCP-Server")
+                    .timeout(Duration.ofMillis(properties.getReadTimeoutMs()))
+                    .GET()
+                    .build();
 
-            if (resource == null) {
-                log.warn("Archive 下載失敗：空回應");
+            HttpResponse<InputStream> response = httpClient.send(request,
+                    HttpResponse.BodyHandlers.ofInputStream());
+
+            // 檢查 HTTP 狀態碼
+            if (response.statusCode() != 200) {
+                log.warn("Archive 下載失敗：HTTP {} - {}", response.statusCode(), url);
                 return Optional.empty();
             }
 
             // 串流寫入暫存檔
-            try (InputStream inputStream = resource.getInputStream();
+            try (InputStream inputStream = response.body();
                  OutputStream outputStream = Files.newOutputStream(tempFile)) {
                 long bytesWritten = inputStream.transferTo(outputStream);
                 log.info("Archive 下載成功，大小: {} bytes，暫存於: {}", bytesWritten, tempFile);
@@ -117,6 +139,10 @@ public class ArchiveFetchStrategy implements GitHubFetchStrategy {
             // 從暫存檔解壓並提取檔案
             return extractFilesFromPath(tempFile, owner, repo, path, ref);
 
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            log.warn("Archive 下載被中斷: {}", e.getMessage());
+            return Optional.empty();
         } catch (Exception e) {
             log.warn("Archive 策略失敗: {}", e.getMessage());
             return Optional.empty();

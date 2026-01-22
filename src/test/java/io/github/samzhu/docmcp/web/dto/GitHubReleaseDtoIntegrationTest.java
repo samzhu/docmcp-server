@@ -5,8 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.samzhu.docmcp.infrastructure.github.GitHubRelease;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.web.client.RestClient;
 
 import java.time.OffsetDateTime;
@@ -23,6 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * </p>
  */
 @DisplayName("GitHubReleaseDto 整合測試（實際呼叫 GitHub API）")
+@Tag("integration")
 class GitHubReleaseDtoIntegrationTest {
 
     private static final String GITHUB_API_BASE = "https://api.github.com";
